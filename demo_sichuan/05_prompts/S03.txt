@@ -1,0 +1,10 @@
+SHOT S03 — 川剧变脸舞台，10–15s
+
+IMAGE PROMPT
+A small Sichuan opera stage inside an old teahouse, 16:9. Xiao He, a 24-year-old Chinese Sichuan opera performer, short black bob hair, small mole behind the left ear, red and black embroidered opera costume with gold trim, gold and black face paint, intense confident eyes. She snaps a red fan open; a crimson, black and gold opera mask flashes at the edge of the fan. Red velvet curtain, warm stage top light, brass gong, audience silhouettes in the foreground, tea tables and steam in the background. Flat vector illustration, clean geometric shapes, paper grain, dramatic cinnabar red, ink black, antique gold, cinematic stage lighting. Mid-shot, slight low angle. No panda. No readable text.
+
+VIDEO MOTION PROMPT
+Fast horizontal camera move with a slight push-in. Xiao He flicks the fan; the mask changes from red to black to gold in three quick beats, sleeves snap, the audience leans forward, gong vibration. Duration 5 seconds. Crisp motion, no face morphing, no extra limbs, no flicker, no duplicate faces.
+
+NEGATIVE
+panda, panda costume, panda rap, photorealistic skin, anime face, extra characters with faces, extra fingers, distorted hands, face morphing, inconsistent costume, brand logos, watermark, captions, readable text, neon overload, sci-fi, clutter, fast random cuts, camera shake, flicker, melted masks.

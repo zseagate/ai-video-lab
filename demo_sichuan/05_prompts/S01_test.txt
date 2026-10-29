@@ -1,0 +1,8 @@
+IMAGE PROMPT
+flat vector illustration of a traditional Chinese teahouse at night, warm amber windows, red lantern, simple geometric shapes, rain, wet street, cozy, cinematic, no text, no people, no panda
+
+VIDEO MOTION PROMPT
+slow push-in, rain falling, lantern glow
+
+NEGATIVE
+panda, photorealistic, anime, text, captions, watermark, neon, cyberpunk, clutter, blurry, noisy, abstract, grainy, melting

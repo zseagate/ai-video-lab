@@ -1,0 +1,10 @@
+SHOT S06 — 收尾标题卡，25–30s
+
+IMAGE PROMPT
+A 16:9 end card in a contemporary Sichuan opera poster style. Deep ink-black background with subtle paper grain, a thin cinnabar-red horizontal rule, a small gold opera-mask line icon in the upper left, and generous negative space. Large elegant Chinese title in antique gold: 一碗茶，慢慢摆. Smaller cream subtitle below: 30 秒川味实验. A quiet line at the bottom: AI 写词 · Suno · ComfyUI + Seedance · CapCut. Flat vector graphic design, minimal, cinematic, no clutter. No panda. No brand logos. No QR code.
+
+VIDEO MOTION PROMPT
+Very slow push-in on the title card; the gold title shimmers subtly, the red rule draws itself from left to right, a few paper-grain specks drift. Duration 5 seconds. Minimal motion, no flicker, no text warping.
+
+NEGATIVE
+panda, panda motif, photorealistic, anime, extra text, gibberish text, brand logos, watermark, QR code, neon, sci-fi, clutter, fast motion, camera shake, flicker, distorted Chinese characters.

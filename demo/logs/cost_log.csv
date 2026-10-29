@@ -1,0 +1,8 @@
+item,provider,quantity,unit_cost_cny,total_cost_cny,notes
+LLM 脚本/分镜,local,1,0,0,本地完成
+图像/视频生成,local,0,0,0,本 Demo 使用矢量渲染；正式版用 Seedance
+音乐生成,local,0,0,0,本 Demo 使用程序合成 beat；正式版用 Suno
+人声,local,1,0,0,Windows SAPI
+剪辑,local,1,0,0,ffmpeg + CapCut 自带编码器
+素材,local,0,0,0,无第三方素材
+合计,—,—,—,0,本地离线 Demo

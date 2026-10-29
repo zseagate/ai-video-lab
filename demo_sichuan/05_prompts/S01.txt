@@ -1,0 +1,10 @@
+SHOT S01 — 雨夜老茶馆外景，0–5s
+
+IMAGE PROMPT
+A rainy night in an old Sichuan teahouse alley, wide establishing shot, 16:9. Aged grey-tile roof with rain dripping from the eaves, warm amber light spilling from wooden lattice windows, two red paper lanterns glowing softly, bamboo chairs and a worn wooden table under the eaves, a covered tea bowl (gaiwan) on the table with visible steam. Wet stone pavement reflects red and gold light. A small wooden sign with a painted tea-leaf symbol, no readable text. Flat vector illustration, clean geometric shapes, subtle paper grain, cinematic warm-cool contrast, deep teal rain night, cinnabar red, antique gold. Quiet, intimate, inviting. Camera: very slow push-in. No people in frame. No panda. No logos. No captions.
+
+VIDEO MOTION PROMPT
+Very slow push-in from the rainy alley toward the teahouse entrance. Rain falls steadily, lanterns sway a little, steam rises from the tea bowl, window light flickers gently. Duration 5 seconds. Keep composition stable, no camera shake, no flicker, no morphing.
+
+NEGATIVE
+panda, panda costume, panda rap, cartoon panda, photorealistic skin, anime face, extra people, extra fingers, distorted hands, face morphing, brand logos, watermark, captions, readable text, neon overload, sci-fi, cyberpunk, clutter, fast motion, camera shake, flicker, duplicate objects, melted objects, Western fantasy architecture.

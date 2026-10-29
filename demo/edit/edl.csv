@@ -1,0 +1,9 @@
+shot,in_s,out_s,source,transition_in,transition_out,notes
+S01,0.0,3.0,output/frames/frame_0000.jpg–frame_0089.jpg,cut,cut,建立空间；字幕「清晨六点半 街角灯还亮」
+S02,3.0,6.0,output/frames/frame_0090.jpg–frame_0179.jpg,cut,cut,咖啡微距；字幕「第一杯咖啡 等一个晚到的人」
+S03,6.0,9.0,output/frames/frame_0180.jpg–frame_0269.jpg,cut,cut,人物中景；看门/眨眼
+S04,9.0,12.0,output/frames/frame_0270.jpg–frame_0359.jpg,cut,cut,雨窗；雨声渐入
+S05,12.0,15.0,output/frames/frame_0360.jpg–frame_0449.jpg,cut,cut,杯套手写；字幕「我把你的名字 写在杯套上」
+S06,15.0,18.0,output/frames/frame_0450.jpg–frame_0539.jpg,cut,cut,街角雨棚；两杯咖啡
+S07,18.0,21.0,output/frames/frame_0540.jpg–frame_0629.jpg,cut,cut,杯套特写；主题句
+S08,21.0,24.0,output/frames/frame_0630.jpg–frame_0719.jpg,cut,fade out,结尾微笑 + 收尾卡

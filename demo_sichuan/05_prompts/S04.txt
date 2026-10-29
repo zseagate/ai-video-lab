@@ -1,0 +1,10 @@
+SHOT S04 — 火锅红汤微距，15–20s
+
+IMAGE PROMPT
+Extreme close-up of a bubbling Sichuan hotpot, 16:9. Deep red broth rolling with chili oil, dried red chilies, green Sichuan peppercorns, star anise, slices of beef and tripe, a pair of wooden chopsticks lifting a piece of tripe, steam rising in thick curls. Warm red-orange light from below, dark background, glistening highlights on the chili oil. Flat vector illustration, clean shapes, subtle paper grain, rich cinnabar red, burnt orange, ink black, appetizing and cinematic. Macro shot, shallow depth of field. No people. No text. No panda.
+
+VIDEO MOTION PROMPT
+Slow downward tilt across the hotpot; broth bubbles and rolls, steam curls upward, chopsticks lift the tripe slowly, chili oil shimmers. Duration 5 seconds. Smooth, appetizing motion, no splashing chaos, no camera shake, no flicker.
+
+NEGATIVE
+panda, panda motif, photorealistic meat, anime food, extra chopsticks, distorted hands, extra fingers, brand logos, watermark, captions, readable text, neon, sci-fi, clutter, fast motion, camera shake, flicker, duplicate bowls, melted food.

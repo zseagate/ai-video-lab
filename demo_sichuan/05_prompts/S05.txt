@@ -1,0 +1,10 @@
+SHOT S05 — 雨巷红灯笼跟拍，20–25s
+
+IMAGE PROMPT
+A rainy old Sichuan alley at night, 16:9. Xiao He, a 24-year-old Chinese Sichuan opera performer, short black bob hair, small mole behind the left ear, red and black embroidered opera costume with gold trim, gold face paint partially removed, walks under a translucent red umbrella with two friends as dark silhouettes. Rows of red lanterns overhead, wet stone pavement with long red and gold reflections, white steam from a food stall, distant teahouse windows. Flat vector illustration, clean geometric shapes, paper grain, cinematic cinnabar red and deep teal, warm lantern glow, joyful and relaxed. Wide shot, slow tracking camera. No panda. No readable text.
+
+VIDEO MOTION PROMPT
+Slow tracking shot following the group from behind as they walk through the rainy alley; lanterns sway, rain falls, reflections ripple on the wet stones, one friend laughs and turns slightly. Duration 5 seconds. Natural walking motion, no face morphing, no extra limbs, no flicker, no camera shake.
+
+NEGATIVE
+panda, panda costume, panda rap, photorealistic skin, anime face, extra people with detailed faces, extra fingers, distorted hands, face morphing, inconsistent costume, brand logos, watermark, captions, readable text, neon overload, sci-fi, clutter, fast motion, camera shake, flicker, duplicate umbrellas.

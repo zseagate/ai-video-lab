@@ -1,0 +1,10 @@
+SHOT S02 — 盖碗茶特写，5–10s
+
+IMAGE PROMPT
+Extreme close-up of hands lifting the lid of a traditional Sichuan covered tea bowl (gaiwan) on a dark walnut table, 16:9. Steam curls upward in soft ribbons, the tea liquor is amber-gold, the porcelain is cream-white with a thin cinnabar rim. In the background, a rain-streaked wooden window with cold teal bokeh, warm amber lamp light from the left. Fingers are relaxed and natural, sleeves are dark red cloth. Flat vector illustration, clean shapes, subtle paper grain, cinematic side-back lighting, shallow depth of field, intimate and slow. No face. No text. Camera: gentle handheld, slight downward tilt.
+
+VIDEO MOTION PROMPT
+A hand slowly lifts the gaiwan lid; steam swirls and expands; rain streaks drift down the window behind; warm light breathes gently. Duration 5 seconds. Subtle natural hand motion, no extra fingers, no morphing, no jump cuts.
+
+NEGATIVE
+panda, panda motif, photorealistic skin, anime face, extra fingers, six fingers, distorted hands, mutated fingers, face, brand logos, watermark, captions, readable text, neon, sci-fi, clutter, fast motion, camera shake, flicker, duplicate cups, melted porcelain.

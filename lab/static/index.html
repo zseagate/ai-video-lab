@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ai-video-lab · 本地 AI 视频实验室</title>
+<style>
+  :root{--bg:#0e1320;--panel:#171f30;--line:#2a3652;--txt:#e7edf7;--dim:#8fa0bd;--acc:#4f8cff;--ok:#54d17e;--warn:#ffb454;--err:#ff7a7a}
+  *{box-sizing:border-box}body{margin:0;font-family:system-ui,"Microsoft YaHei",sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+  header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header h1{font-size:16px;margin:0;font-weight:700}
+  header .sub{font-size:12px;color:var(--dim)}
+  .chips{display:flex;gap:8px;margin-left:auto}
+  .chip{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--line);color:var(--dim)}
+  .chip.on{color:var(--ok);border-color:var(--ok)}
+  .chip.off{color:var(--warn);border-color:var(--warn)}
+  .layout{display:grid;grid-template-columns:250px 1fr;gap:0;min-height:calc(100vh - 57px)}
+  aside{border-right:1px solid var(--line);padding:18px 16px;background:var(--panel)}
+  aside h2{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px}
+  .proj{display:block;width:100%;text-align:left;background:none;border:1px solid transparent;color:var(--txt);border-radius:8px;padding:8px 10px;margin:2px 0;cursor:pointer;font-size:13px}
+  .proj:hover{background:#1f2a40}
+  .proj.active{background:#23324d;border-color:var(--acc)}
+  .newproj{display:flex;gap:6px;margin-top:14px}
+  .newproj input{flex:1;background:#0d1424;border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:7px 9px;font-size:12px}
+  .delproj{margin-top:8px;width:100%;text-align:center;background:none;border:1px solid var(--line);color:var(--err);border-radius:8px;padding:6px;font-size:12px;cursor:pointer}
+  .delproj:hover{background:#2a1620;border-color:var(--err)}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .btn{background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer}
+  .btn:hover{border-color:var(--acc)}
+  .btn.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+  .btn.warn{color:var(--warn);border-color:var(--warn)}
+  .btn.sm{padding:4px 9px;font-size:11px}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50}
+  .modal.show{display:flex}
+  .modal .box{width:min(560px,92vw);max-height:86vh;overflow:auto}
+  textarea.script{width:100%;min-height:240px;background:#0d1424;border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:10px;font-family:Consolas,monospace;font-size:12.5px;resize:vertical}
+  .hint{font-size:11px;color:var(--dim);margin-top:6px}
+  .shot{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:start;padding:9px 10px;border-top:1px solid var(--line)}
+  .shot:first-child{border-top:0}
+  .shot .tag{font-size:11px;color:var(--dim);background:#0d1424;border:1px solid var(--line);border-radius:6px;padding:3px 7px;text-align:center}
+  .shot .pa{font-size:12px;line-height:1.45;color:#b8c7e0;word-break:break-all}
+  .shot .pa b{color:var(--txt);font-weight:600}
+  .shot-actions{display:flex;gap:6px}
+  input.st{width:100%;background:#0d1424;border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:7px 9px;font-size:12px;margin-top:4px}
+  input.st:focus{border-color:var(--acc);outline:none}
+  main{padding:20px 24px 60px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .card h3{margin:0 0 6px;font-size:14px;display:flex;align-items:center;gap:8px}
+  .card p{font-size:12px;color:var(--dim);margin:0 0 12px;line-height:1.5}
+  .num{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--acc);color:#fff;font-size:11px;align-items:center;justify-content:center;flex:none}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--dim);flex:none}
+  .dot.done{background:var(--ok)}.dot.run{background:var(--warn);animation:pulse 1s infinite}
+  @keyframes pulse{50%{opacity:.35}}
+  button.run{background:var(--acc);color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer}
+  button.run:disabled{opacity:.45;cursor:not-allowed}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+  .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .box h4{margin:0 0 8px;font-size:12px;color:var(--dim)}
+  video{width:100%;border-radius:8px;background:#000;max-height:280px}
+  pre{background:#0a0e18;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:12px;white-space:pre-wrap;max-height:260px;overflow:auto;color:#b8c7e0;margin:0}
+  #log{margin-top:16px;background:#0a0e18;border:1px solid var(--line);border-radius:10px;padding:14px;font-family:Consolas,monospace;font-size:12.5px;white-space:pre-wrap;max-height:320px;overflow:auto;color:#b8c7e0}
+  #log .ok{color:var(--ok)}#log .err{color:var(--err)}#log .dim{color:var(--dim)}
+  a.link{color:var(--acc);font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>ai-video-lab</h1><span class="sub">本地 AI 视频实验室 · 管理台</span>
+  <div class="chips" id="chips"></div>
+</header>
+<div class="layout">
+  <aside>
+    <h2>项目</h2>
+    <div id="projects"></div>
+    <div class="newproj"><input id="npname" placeholder="新项目名"><button class="run" onclick="newProject()">新建</button></div>
+    <button class="delproj" onclick="deleteProject()">删除当前项目</button>
+  </aside>
+  <main>
+    <div class="toolbar" style="margin-bottom:14px">
+      <button class="btn primary" onclick="openImport()">📄 导入剧本</button>
+      <button class="btn" onclick="openPaste()">✏️ 手动粘贴</button>
+      <button class="btn" onclick="importExample()">导入示例</button>
+      <button class="btn" onclick="openBatch()">🚀 批量导入并生成分镜</button>
+      <span class="hint" id="projmeta" style="margin-left:auto"></span>
+    </div>
+    <div class="grid" id="stages"></div>
+    <div class="cols">
+      <div class="box"><h4>成片预览</h4><video id="preview" controls></video><div id="finalinfo" style="font-size:12px;color:var(--dim);margin-top:6px"></div></div>
+      <div class="box"><h4>文档 / 配置</h4>
+        <div style="margin-bottom:8px">
+          <a class="link" href="#" onclick="loadFile('storyboard.md');return false">故事板</a> ·
+          <a class="link" href="#" onclick="loadFile('shot_list.csv');return false">镜头清单</a> ·
+          <a class="link" href="#" onclick="loadFile('manifest.json');return false">Manifest</a> ·
+          <a class="link" href="#" onclick="loadFile('config');return false">config.yaml</a>
+        </div>
+        <pre id="doc">选择左侧文件查看。</pre>
+      </div>
+    </div>
+    <div class="box" style="margin-top:14px">
+      <div class="toolbar" style="margin-bottom:10px">
+        <h4 style="margin:0">一致性锚点（跨场景人物/道具/色调）</h4>
+        <span style="flex:1"></span>
+        <span class="hint">自动从剧本提取，可编辑；保存后同步到所有镜头提示词</span>
+        <button class="btn sm" onclick="saveStyle()">保存并同步</button>
+        <button class="btn sm" onclick="refreshStyle()">重新提取</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px">
+        <div><label class="hint">角色（姓名/形象）</label><input class="st" id="st_character"></div>
+        <div><label class="hint">服装</label><input class="st" id="st_costume"></div>
+        <div><label class="hint">关键道具</label><input class="st" id="st_props"></div>
+        <div><label class="hint">场景基调</label><input class="st" id="st_setting"></div>
+        <div><label class="hint">色彩/风格</label><input class="st" id="st_palette"></div>
+      </div>
+      <div class="hint" id="styleinfo" style="margin-top:8px"></div>
+    </div>
+    <div class="box" style="margin-top:14px">
+      <div class="toolbar" style="margin-bottom:10px">
+        <h4 style="margin:0">提示词工作台（Seedance）</h4>
+        <span style="flex:1"></span>
+        <button class="btn sm" onclick="rebuildStoryboard('auto')">重建分镜+提示词</button>
+        <button class="btn sm" onclick="regenAllPrompts()">全部重新生成</button>
+      </div>
+      <div id="shots"></div>
+    </div>
+    <div id="log">就绪。选择项目并运行阶段。</div>
+  </main>
+</div>
+<div class="modal" id="importModal">
+  <div class="box">
+    <h4>导入剧本（.md / .txt）</h4>
+    <input type="file" id="scriptFile" accept=".md,.txt,.markdown" class="btn" style="width:100%">
+    <div class="hint">选择后点「上传并导入」：写入 <code>script/script.md</code>，解析出标题/一句话/场景 → manifest.json</div>
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal('importModal')">取消</button>
+      <button class="btn primary" onclick="uploadScript()">上传并导入</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="pasteModal">
+  <div class="box">
+    <h4>手动粘贴剧本</h4>
+    <textarea class="script" id="scriptText" placeholder="# 标题&#10;一句话梗概&#10;&#10;## 场景一&#10;描述…&#10;&#10;## 场景二&#10;描述…"></textarea>
+    <div class="hint">格式：首行 <code># 标题</code>，随后 <code>## 场景</code>，场景下写正文。</div>
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal('pasteModal')">取消</button>
+      <button class="btn primary" onclick="pasteScript()">粘贴并导入</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="batchModal">
+  <div class="box">
+    <h4>🚀 批量导入并生成分镜（新项目，一步到位）</h4>
+    <div class="toolbar" style="margin-bottom:8px">
+      <input id="batchName" placeholder="新项目名" class="st" style="flex:1">
+    </div>
+    <input type="file" id="batchFile" accept=".md,.txt,.markdown" class="btn" style="width:100%">
+    <div class="hint">选择剧本文件 → 自动：新建项目 + 导入剧本 + 拆分分镜 + 生成 Seedance 提示词 + 提取一致性锚点。也可先粘贴：</div>
+    <textarea class="script" id="batchText" style="min-height:120px" placeholder="或直接粘贴剧本文本…"></textarea>
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal('batchModal')">取消</button>
+      <button class="btn primary" onclick="runBatch()">批量导入并生成</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="promptModal">
+  <div class="box">
+    <div class="toolbar" style="margin-bottom:8px">
+      <h4 id="pmTitle" style="margin:0">提示词</h4>
+      <span style="flex:1"></span>
+      <button class="btn sm" onclick="optimizeCurrent()">✨ 优化</button>
+    </div>
+    <textarea class="script" id="pmText" style="min-height:260px"></textarea>
+    <div class="hint" id="pmHint"></div>
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal('promptModal')">取消</button>
+      <button class="btn primary" onclick="savePrompt()">保存</button>
+    </div>
+  </div>
+</div>
+<script>
+const stages=[
+ {name:"init",label:"初始化",desc:"创建项目目录结构"},
+ {name:"import-script",label:"剧本导入",desc:"解析示例剧本 → manifest"},
+ {name:"storyboard",label:"分镜制作",desc:"镜头卡 + 提示词 + 故事板"},
+ {name:"audio",label:"声音制作",desc:"SAPI 占位念白（正式换 Suno）"},
+ {name:"composite",label:"合成",desc:"Wan / Seedance / FFmpeg → final.mp4"},
+ {name:"qc",label:"质检",desc:"时长 / 流 / 体积检查"},
+];
+let project="demo";
+const $=id=>document.getElementById(id);
+function addLog(t,cls){const d=document.createElement("div");if(cls)d.className=cls;d.textContent=t;$("log").appendChild(d);$("log").scrollTop=$("log").scrollHeight;}
+async function api(u){const r=await fetch(u);return await r.json();}
+async function refreshEngines(){const e=await api("/api/engines");$("chips").innerHTML=
+ `<span class="chip ${e.ffmpeg.ready?'on':'off'}">FFmpeg</span>`+
+ `<span class="chip ${(e.footage&&e.footage.clips>0)?'on':'off'}">实拍素材${e.footage&&e.footage.clips?` (${e.footage.clips})`:''}</span>`+
+ `<span class="chip ${e.wan.ready?'on':'off'}">本地 Wan</span>`+
+ `<span class="chip ${e.seedance.ready?'on':'off'}">云端 Seedance</span>`;}
+async function refreshProjects(){const p=await api("/api/projects");$("projects").innerHTML=p.projects.map(n=>`<button class="proj ${n===project?'active':''}" onclick="selectProject('${n}')">${n}</button>`).join("");}
+function stageAction(st){
+  // Per-stage concrete action buttons (in addition to "运行").
+  if(st.name==="import-script")return `<button class="btn sm primary" onclick="openImport()">导入剧本</button> `;
+  if(st.name==="composite")return `<button class="btn sm" onclick="runStage('composite',null,{steps:25,max_frames:81})">高清档</button> `;
+  return "";
+}
+async function refreshStatus(){const s=await api(`/api/status?project=${project}`);
+ const scene=s.files&&s.manifest?null:null;
+ $("stages").innerHTML=stages.map((st,i)=>{const stt=s.stages[st.name]||{done:false};return `<div class="card"><h3><span class="num">${i+1}</span><span class="dot ${stt.done?'done':''}"></span>${st.label}</h3><p>${st.desc}</p><div class="toolbar">${stageAction(st)}<button class="run" onclick="runStage('${st.name}',this)">运行</button></div></div>`;}).join("");
+ $("projmeta").textContent=`项目：${s.project}`;
+ const f=s.final;if(f.exists){$("preview").src=`/api/media/final?project=${project}&t=${Date.now()}`;$("finalinfo").textContent=`${f.path} · ${(f.size/1024).toFixed(0)} KB`;}else{$("preview").removeAttribute("src");$("finalinfo").textContent="尚未合成 final.mp4";}}
+async function selectProject(n){project=n;await Promise.all([refreshProjects(),refreshStatus(),refreshShots(),refreshStyle()]);addLog(`已切换项目: ${n}`);}
+async function runStage(name,btn,params){if(btn){btn.disabled=true;btn.textContent="运行中…";}addLog(`▶ ${name} ...`);
+ try{const q=new URLSearchParams({project});if(params)Object.entries(params).forEach(([k,v])=>q.set(k,v));
+  const r=await fetch(`/api/run/${name}?${q}`);const j=await r.json();
+  if(r.ok&&(j.status==="ok"||j.status==="warn")){addLog(`✓ ${name}: ${JSON.stringify(j)}`,"ok");}else{addLog(`✗ ${name}: ${JSON.stringify(j)}`,"err");}
+ }catch(e){addLog(`✗ ${name}: ${e}`,"err");}
+ if(btn){btn.disabled=false;btn.textContent="运行";}refreshStatus();refreshEngines();}
+async function importScript(content){
+ const r=await fetch(`/api/script/import?project=${project}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({content})});
+ const j=await r.json();
+ if(j.status==="ok"){addLog(`✓ 剧本导入: ${j.title} · ${j.scene_count} 场景`,"ok");}else{addLog(`✗ 剧本导入: ${JSON.stringify(j)}`,"err");}
+ refreshStatus();return j;}
+function openModal(id){$(id).classList.add("show");}
+function closeModal(id){$(id).classList.remove("show");}
+function openImport(){$("scriptFile").value="";openModal("importModal");}
+function openPaste(){openModal("pasteModal");}
+async function uploadScript(){const f=$("scriptFile").files[0];if(!f){addLog("未选择文件","err");return;}
+ const t=await f.text();closeModal("importModal");await importScript(t);}
+async function pasteScript(){const t=$("scriptText").value.trim();if(!t){addLog("剧本为空","err");return;}
+ closeModal("pasteModal");await importScript(t);}
+async function importExample(){
+ const r=await fetch(`/api/script/import?project=${project}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({content:"# 示例项目\n一句话示例。\n\n## 场景一\n示例正文一。\n\n## 场景二\n示例正文二。"})});
+ const j=await r.json();if(j.status==="ok"){addLog(`✓ 示例已导入: ${j.scene_count} 场景`,"ok");}else{addLog(`✗ 示例导入失败: ${JSON.stringify(j)}`,"err");}refreshStatus();}
+async function deleteProject(){if(!confirm(`删除项目「${project}」？将删除其目录（含产物）。此操作不可恢复。`))return;
+ const r=await fetch("/api/project/delete",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:project})});
+ const j=await r.json();if(j.status==="ok"){addLog(`✓ 已删除项目: ${j.project} (removed=${j.removed})`,"ok");project="demo";await selectProject("demo");}else{addLog(`✗ 删除失败: ${JSON.stringify(j)}`,"err");}}
+function firstLine(t){return (t||"").split("\n")[0].replace(/^[a-z]+:\s*/i,"");}
+// 差异提示：有改动显示已优化+改动项；无改动明确提示「已是规范形态」。
+function changedLog(prefix,changed){
+  if(changed && changed.length){
+    addLog(`✨ ${prefix}: 已优化 → ${changed.join("，")}`,"ok");
+    return {log:`已优化 → ${changed.join("，")}`, has:true};
+  }
+  addLog(`ℹ️ ${prefix}: 已是规范形态，无改动`,"dim");
+  return {log:"已是规范形态，无改动", has:false};
+}
+async function refreshShots(){
+ const r=await fetch(`/api/shots?project=${project}`);const j=await r.json();const s=j.shots||[];
+ if(!s.length){$("shots").innerHTML=`<div class="hint">尚无镜头。先「导入剧本」再「运行 分镜制作」。</div>`;return;}
+ $("shots").innerHTML=s.map(x=>`<div class="shot"><span class="tag">${x.shot}</span><div class="pa"><b>${x.scene}</b> · ${x.shot_size}/${x.camera} · ${x.function} · ${x.duration_s}s<br>${firstLine(x.prompt)}</div><div class="shot-actions"><button class="btn sm" onclick="editPrompt('${x.shot}')">编辑</button><button class="btn sm" onclick="optimizePrompt('${x.shot}')">优化</button><button class="btn sm" onclick="regenPrompt('${x.shot}')">重生成</button></div></div>`).join("");
+}
+let curShot="";
+async function editPrompt(shot){curShot=shot;
+ const r=await fetch(`/api/shots?project=${project}`);const j=await r.json();const x=(j.shots||[]).find(s=>s.shot===shot);
+ $("pmTitle").textContent=`提示词 · ${shot}`;$("pmText").value=x?x.prompt:"";$("pmHint").textContent=`${x?x.shot_size+"/"+x.camera+" · "+x.function:""} · ${shot}.txt → prompts/`;openModal("promptModal");}
+async function savePrompt(){const t=$("pmText").value.trim();if(!t)return;
+ const r=await fetch(`/api/prompt/save?project=${project}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({shot:curShot,prompt:t})});
+ const j=await r.json();if(j.status==="ok"){addLog(`✓ 已保存 ${curShot}.txt`,"ok");closeModal("promptModal");refreshShots();}else{addLog(`✗ 保存失败: ${JSON.stringify(j)}`,"err");}}
+async function optimizeCurrent(){const t=$("pmText").value.trim();if(!t)return;
+ const r=await fetch(`/api/prompt/optimize?project=${project}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({shot:curShot,prompt:t})});
+ const j=await r.json();if(j.status==="ok"){
+  const d=changedLog(curShot,j.changed||[]);
+  $("pmText").value=j.prompt;
+  $("pmHint").textContent=d.has?d.log:"ℹ️ 提示词已是规范形态（十层齐全、顺序正确、无重复、锚点一致），无改动。";
+  if(d.has)$("pmHint").textContent="优化完成："+d.log;
+ }else{addLog(`✗ 优化失败: ${JSON.stringify(j)}`,"err");}}
+async function optimizePrompt(shot){curShot=shot;
+ const r=await fetch(`/api/shots?project=${project}`);const j=await r.json();const x=(j.shots||[]).find(s=>s.shot===shot);if(!x)return;
+ const o=await fetch(`/api/prompt/optimize?project=${project}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({shot,prompt:x.prompt})});
+ const oj=await o.json();if(oj.status==="ok"){changedLog(`${shot} 优化`,oj.changed||[]);refreshShots();}else{addLog(`✗ 优化失败: ${JSON.stringify(oj)}`,"err");}}
+async function regenPrompt(shot){curShot=shot;
+ const r=await fetch(`/api/prompt/regenerate?project=${project}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({shot})});
+ const j=await r.json();if(j.status==="ok"){addLog(`✓ ${shot} 已重新生成`,"ok");refreshShots();}else{addLog(`✗ 重新生成失败: ${JSON.stringify(j)}`,"err");}}
+async function regenAllPrompts(){if(!confirm("重新生成所有镜头的 Seedance 提示词？现有手改内容将被覆盖。"))return;
+ const r=await fetch(`/api/prompt/regenerate?project=${project}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({})});
+ const j=await r.json();if(j.status==="ok"){addLog(`✓ 已重新生成 ${j.regenerated} 个提示词`,"ok");refreshShots();}else{addLog(`✗ 失败: ${JSON.stringify(j)}`,"err");}}
+async function rebuildStoryboard(mode){
+ const r=await fetch(`/api/storyboard/rebuild?project=${project}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({mode})});
+ const j=await r.json();if(j.status==="ok"){addLog(`✓ 重建分镜: ${j.scenes} 场 → ${j.shots} 镜头，${j.total_duration_s}s`,"ok");refreshStatus();refreshShots();refreshStyle();}else{addLog(`✗ 重建失败: ${JSON.stringify(j)}`,"err");}}
+async function refreshStyle(){
+ const r=await fetch(`/api/style?project=${project}`);const j=await r.json();const s=j.style||{};
+ $("st_character").value=s.character||"";$("st_costume").value=s.costume||"";
+ $("st_props").value=s.props||"";$("st_setting").value=s.setting||"";$("st_palette").value=s.palette||"";
+ $("styleinfo").textContent=`锚点文件：${j.file||"story_style.json"} · 保存后同步到全部镜头提示词`;}
+async function saveStyle(){
+ const style={character:$("st_character").value,costume:$("st_costume").value,props:$("st_props").value,setting:$("st_setting").value,palette:$("st_palette").value};
+ const r=await fetch(`/api/style/save?project=${project}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({style})});
+ const j=await r.json();if(j.status==="ok"){addLog(`✓ 一致性锚点已保存，同步 ${j.resynced} 个镜头提示词`,"ok");refreshShots();}else{addLog(`✗ 保存失败: ${JSON.stringify(j)}`,"err");}}
+function openBatch(){$("batchName").value="";$("batchFile").value="";$("batchText").value="";openModal("batchModal");}
+async function runBatch(){const n=$("batchName").value.trim();const f=$("batchFile").files[0];
+ let content="";if(f){content=await f.text();}else{content=$("batchText").value.trim();}
+ if(!n){addLog("批量导入：请填项目名","err");return;}if(!content){addLog("批量导入：请选择文件或粘贴文本","err");return;}
+ const r=await fetch("/api/pipeline/import",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:n,content})});
+ const j=await r.json();
+ if(j.status==="ok"){addLog(`✓ 批量导入完成: ${j.title} · ${j.scenes} 场 → ${j.shots} 镜头，${j.total_duration_s}s`,"ok");closeModal("batchModal");await selectProject(n);}
+ else{addLog(`✗ 批量导入失败: ${JSON.stringify(j)}`,"err");}}
+async function newProject(){const n=$("npname").value.trim();if(!n)return;const r=await fetch("/api/project/new",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:n})});const j=await r.json();if(j.status==="ok"){$("npname").value="";addLog(`新建项目: ${j.project}`,"ok");await selectProject(j.project);}else{addLog(`新建失败: ${JSON.stringify(j)}`,"err");}}
+async function loadFile(which){let u;if(which==="config"){u="/api/config";}else{u=`/api/file/${which}?project=${project}`;}
+ try{const r=await fetch(u);const t=await r.text();$("doc").textContent=t;}catch(e){$("doc").textContent="读取失败: "+e;}}
+(async function(){await Promise.all([refreshEngines(),refreshProjects(),refreshStatus(),refreshShots(),refreshStyle()]);})();
+</script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+# ===== 本地环境 =====
+env/
+ComfyUI/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# ===== 第三方 / 参考 / 客户交付 =====
+source/
+delivery_min/
+
+# ===== 生成媒体与构建产物（公开仓库只保留文本/代码） =====
+*.mp4
+*.wav
+*.mp3
+*.zip
+*.exe
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.bmp
+output/frames/
+
+# ===== 本地实验室项目产物（不进公开仓库） =====
+lab/projects/
+
+# ===== 机器相关的启动/下载脚本 =====
+start_comfy.ps1
+start_comfy.bat
+download_model_modelscope.ps1
+download_sd15.ps1
+check_ark_env.bat
+
+# ===== 临时/草稿 =====
+_audit.txt
+_new_05_mid.md
+vlc-help.txt
+
+# ===== 密钥与日志 =====
+.env
+*.env
+*.log

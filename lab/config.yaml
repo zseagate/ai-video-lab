@@ -1,0 +1,31 @@
+# 本地 AI 视频制作实验室默认配置
+# 说明：CLI 默认值在 lab/run.py 中；此文件是文档化的默认口径。
+
+project: lab/projects/demo
+
+engines:
+  text: template          # template | llm
+  video: wan_local        # wan_local | seedance | footage | kling | wan_cloud | placeholder
+                          # wan_local=本地 Wan 2.1 1.3B 草稿; seedance=云端 Seedance(需 ARK_API_KEY/ARK_MODEL_ID)
+                          # footage=实拍素材(assets/footage/Sxx.mp4), 无则回退占位
+  audio: voice            # voice | suno
+  edit: ffmpeg            # ffmpeg | capcut
+
+video:
+  model: wan2.2_ti2v_5b_gguf   # wan2.1_t2v_1.3b_gguf | wan2.2_ti2v_5b_gguf
+  resolution: 480p
+  seconds_per_shot: 5
+
+audio:
+  voice_rate: 1
+
+edit:
+  fps: 30
+  width: 1280
+  height: 720
+  h264_bitrate: 4M
+
+cost:
+  mode: free               # free | estimated
+  api_spend_rmb: 0
+  note: 默认零成本：百炼新用户免费额度 + Suno 每日积分 + 本地 Wan 草稿 + FFmpeg
