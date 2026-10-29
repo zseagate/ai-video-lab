@@ -1,8 +1,8 @@
 # ai-video-lab · 本地 AI 视频制作实验室
 
-> 仓库定位：`ai-video-lab` —— 一套可复现、零成本起步的**本地 AI 视频制作实验室**（剧本 → 分镜 → 声音 → 合成 → QC），同时是一份开源课程包（方法论、课程设计与教学模板）。
+> 仓库定位：`ai-video-lab` —— 一套可复现、零成本起步的**本地 AI 视频制作实验室**（剧本 → 分镜 → 声音 → 合成 → QC），配套开源方法论、技术栈参考与可复用模板。
 >
-> 核心 = `lab/` 本地练习平台 + 开源课程文档。本项目只保留技术栈、工作流和可复用模板，不包含任何受版权保护的影片、音频、歌词、截图、角色设定或活动物料。
+> 核心 = `lab/` 本地练习平台 + 开源方法与技术文档。本项目只保留技术栈、工作流和可复用模板，不包含任何受版权保护的影片、音频、歌词、截图、角色设定或活动物料。
 
 [English summary](#english-summary) · [快速开始](#快速开始) · [仓库结构](#仓库结构) · [许可证](#许可证)
 
@@ -56,7 +56,7 @@ QC 与发布包
 - 任何公司/活动/账号标识、品牌 Logo、真实聊天记录或个人隐私信息；
 - 任何未公开的商业项目素材。
 
-课程中的案例讨论采用**匿名化、结构化**的方法：只讨论叙事结构、声音设计、镜头语言、生产流程和成本模型，不复制具体作品的内容。
+案例讨论采用**匿名化、结构化**的方法：只讨论叙事结构、声音设计、镜头语言、生产流程和成本模型，不复制具体作品的内容。
 
 如果你要在课堂或文章中展示第三方作品，请自行取得权利人授权，或使用你自制/已授权的样片。详见 [DISCLAIMER.md](DISCLAIMER.md)。
 
@@ -82,15 +82,12 @@ QC 与发布包
 
 | 文件 | 内容 | 用途 |
 |---|---|---|
-| [01_视频拆解与逆向工程.md](01_视频拆解与逆向工程.md) | 匿名化案例研究方法：叙事、声音、视觉、生产流程四层拆解 | 备课、课堂案例方法 |
-| [02_工具链技术报告.md](02_工具链技术报告.md) | WorkBuddy、开源画布、Seedance、Suno、剪映 Skill 的定位、能力、接入方式与边界 | 选型、搭建教学环境 |
-| [03_课程设计_6周实战营.md](03_课程设计_6周实战营.md) | 6 周 cohort 课程：目标、模块、作业、评分、交付物 | 主课程产品 |
-| [04_课程设计_2天工作坊.md](04_课程设计_2天工作坊.md) | 2 天线下/直播集训版本 | 轻量课、企业内训 |
-| [05_教学资产包_模板与提示词.md](05_教学资产包_模板与提示词.md) | 剧本、节拍表、镜头卡、资产护照、Seedance/Suno 提示词、EDL、QC 清单 | 直接发给学员 |
-| [06_成本_合规_风险.md](06_成本_合规_风险.md) | 成本测算、合规要求、常见问题与应急预案 | 定价、交付管理 |
-| [07_拉片表模板.md](07_拉片表模板.md) | 逐镜头拉片模板、填写说明与虚构示例 | 学员第一次作业 |
-| [08_本地模型与FFmpeg对比.md](08_本地模型与FFmpeg对比.md) | 本地/云端视频模型选型，FFmpeg 与剪映的分工 | 选型、环境搭建 |
-| [templates/](templates/) | 可直接使用的 CSV / Markdown 模板 | 课堂实操 |
+| [01_视频拆解与逆向工程.md](01_视频拆解与逆向工程.md) | 匿名化案例研究方法：叙事、声音、视觉、生产流程四层拆解 | 方法论 |
+| [02_工具链技术报告.md](02_工具链技术报告.md) | WorkBuddy、开源画布、Seedance、Suno、剪映 Skill 的定位、能力、接入方式与边界 | 技术栈选型 |
+| [03_成本_合规_风险.md](03_成本_合规_风险.md) | 成本测算、合规要求、常见问题与应急预案 | 交付与合规 |
+| [04_拉片表模板.md](04_拉片表模板.md) | 逐镜头拉片模板、填写说明与虚构示例 | 分析方法 |
+| [05_本地模型与FFmpeg对比.md](05_本地模型与FFmpeg对比.md) | 本地/云端视频模型选型，FFmpeg 与剪映的分工 | 环境搭建 |
+| [templates/](templates/) | 可直接使用的 CSV / Markdown 模板 | 实操 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 贡献指南 | 参与维护 |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | 社区行为准则 | 社区治理 |
 | [SECURITY.md](SECURITY.md) | 安全问题与敏感内容报告方式 | 安全 |
@@ -98,17 +95,6 @@ QC 与发布包
 | [DISCLAIMER.md](DISCLAIMER.md) | 版权、AI 内容、教学使用免责声明 | 法律信息 |
 
 ---
-
-## 课程产品矩阵
-
-| 产品 | 时长 | 学员产出 | 适合 | 对应文档 |
-|---|---|---|---|---|
-| 体验课 | 90 分钟 | 无成片，带走模板 | 引流、公开课 | `01` + `05` |
-| 2 天工作坊 | 2 天 | 20–30 秒 Demo | 个人体验、企业内训 | `04` |
-| 6 周实战营 | 6 周 | 60–90 秒成片 | 真正想做作品/接单 | `03` |
-| 企业定制 | 2–5 天 | 1 支品牌片 + 团队流程 | 市场/品牌/活动团队 | `04` + `06` |
-
-**建议开课顺序**：先用 90 分钟体验课验证需求 → 用 2 天工作坊跑通交付 → 再把 6 周营作为高客单产品。不要一上来卖 6 周营，环境与作业会把新手劝退。
 
 ---
 
@@ -183,17 +169,17 @@ setx ARK_MODEL_ID "你的模型ID"
 ## 快速开始
 
 1. 阅读 [`01_视频拆解与逆向工程.md`](01_视频拆解与逆向工程.md)，理解「叙事—声音—视觉—生产」四层拆解法。
-2. 阅读 [`02_工具链技术报告.md`](02_工具链技术报告.md)，按你的预算和学员水平选择画布与模型。
-3. 复制 [`templates/`](templates/) 到新项目目录。
+2. 阅读 [`02_工具链技术报告.md`](02_工具链技术报告.md)，按预算与硬件选择画布与视频模型。
+3. 复制 [`templates/`](templates/) 到新项目目录，或用 `lab/` 的六阶段流水线（`lab/run.py all`）。
 4. 用 [`templates/00_concept.md`](templates/00_concept.md) 写一句话主题。
 5. 用 [`templates/08_lyrics_template.md`](templates/08_lyrics_template.md) 写歌词，再用 Suno 出歌。
 6. 用 [`templates/02_beat_sheet.csv`](templates/02_beat_sheet.csv) 和 [`templates/03_shot_list.csv`](templates/03_shot_list.csv) 做节拍表与镜头卡。
-7. 用 [`templates/04_asset_passport.md`](templates/04_asset_passport.md) 锁角色/场景。
-8. 按 [`05_教学资产包_模板与提示词.md`](05_教学资产包_模板与提示词.md) 的提示词库在画布中生成。
+7. 用 [`templates/04_asset_passport.md`](templates/04_asset_passport.md) 锁角色/场景（跨镜头一致性锚点）。
+8. 用 `lab/` 的提示词生成器生成 Seedance 提示词，或按 `02` 工具链报告接入画布生成。
 9. 用 [`templates/05_edl.csv`](templates/05_edl.csv) 和剪映 Skill 粗剪，再人工精剪。
 10. 用 [`templates/06_qc_checklist.md`](templates/06_qc_checklist.md) 做发布前检查。
 
-> 模板中的示例均为虚构教学示例，不对应任何真实影片、品牌或人物。
+> 模板中的示例均为虚构示例，不对应任何真实影片、品牌或人物。
 
 ---
 
@@ -238,7 +224,7 @@ setx ARK_MODEL_ID "你的模型ID"
 - 自媒体/短视频创作者，想升级「AI 味」重的口播/图文号；
 - 企业市场/品牌/活动策划，要做预热片、主题曲、展会视频；
 - 设计师/插画师，想把静态作品变成动态 IP；
-- 教师/培训师，想做课程宣传片或知识 MV；
+- 教师/培训师，想做教学宣传片或知识类视频；
 - 独立开发者/小团队，想低成本做产品发布片。
 
 ---
@@ -282,9 +268,9 @@ setx ARK_MODEL_ID "你的模型ID"
 
 ## English summary
 
-**ai-video-lab — a local AI video production lab + open course kit.**
+**ai-video-lab — a local AI video production lab + open methods & tech reference.**
 
-This repository documents a reproducible, low-cost local lab (script → storyboard → sound → composite → QC) and an open course kit for AI-assisted video:
+This repository documents a reproducible, low-cost local lab (script → storyboard → sound → composite → QC) with open methods, tech-stack notes and reusable templates:
 
 ```text
 theme → lyrics → Suno → beat sheet → shot list → asset passport
@@ -293,6 +279,6 @@ theme → lyrics → Suno → beat sheet → shot list → asset passport
 
 The video engine is pluggable: **real footage** (`assets/footage/`, zero-cost, real-person look) or **cloud Seedance** (needs `ARK_API_KEY` + `ARK_MODEL_ID`), with a local Wan draft fallback for previs.
 
-It includes course designs, templates, prompt patterns, cost models, and compliance checklists. It does **not** include any third-party video, audio, lyrics, screenshots, character designs, event branding, or private chat records. The case-study method is anonymized and focuses on structure and production logic, not content reproduction.
+It includes templates, prompt patterns, cost models, and compliance checklists. It does **not** include any third-party video, audio, lyrics, screenshots, character designs, event branding, or private chat records. The case-study method is anonymized and focuses on structure and production logic, not content reproduction.
 
 Licensed under MIT (code) and CC BY 4.0 (documentation and templates). Tool names and trademarks belong to their respective owners; no affiliation or endorsement is implied.
