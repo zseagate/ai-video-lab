@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ai-video-lab"
 version = "0.1.0"
-description = "Low-spec, local-first AI video production lab (script -> storyboard -> sound -> composite -> QC)"
+description = "低配、本地优先的 AI 视频制作实验室（剧本 → 分镜 → 声音 → 合成 → 质检）"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
