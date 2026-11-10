@@ -21,8 +21,8 @@ python lab\run.py storyboard --project lab\projects\demo
 # 4. 生成占位声音（本地 SAPI 念白；正式版换 Suno）
 python lab\run.py audio --project lab\projects\demo
 
-# 5. 合成（默认按低配设置；无素材时自动生成占位色块或关键帧动效）
-python lab\run.py composite --project lab\projects\demo
+# 5. 合成（默认按低配设置；可选叠化转场 / 字幕）
+python lab\run.py composite --project lab\projects\demo --transition fade --xfade 0.5 --subtitles
 
 # 6. 质检
 python lab\run.py qc --project lab\projects\demo
@@ -169,6 +169,40 @@ python lab\run.py composite --project lab\projects\demo --engine kenburns
 
 > 工程理念参考了本地优先视频编辑器 [Concat](https://github.com/jub0t/Concat)（Rust + FFmpeg 7，AGPL-3.0）的「离线优先、模型按需下载、关键帧动效、代理预览」思路；本项目**未复制其任何代码**，全部为独立的 Python + FFmpeg 实现。
 
+## 转场与字幕（可选）
+
+```powershell
+# 叠化转场（0.5s），支持 fade/wipeleft/wiperight/slideleft/slideup/circleopen
+python lab\run.py composite --project lab\projects\demo --transition fade --xfade 0.5
+
+# 烧录字幕：读取 shot_list.csv 的 subtitle（或 caption）列
+python lab\run.py composite --project lab\projects\demo --subtitles
+```
+
+- 转场用 FFmpeg `xfade`，自动统一各片段为 CFR，再按累计时长计算 offset；时长会比硬切少 `(N-1) × xfade`。
+- 字幕用 `drawtext` + 文本文件，自动查找中文字体（`msyh.ttc` / `simhei.ttf` / PingFang / Noto CJK）；无字体时跳过并在结果里返回 `subtitle_note`。
+- 管理台合成阶段新增「叠化转场」「字幕」按钮；API 支持 `transition/xfade/subtitles` 参数。
+- 声音仍是顺序拼接，转场默认按 `-shortest` 收尾（练习足够；正式交付可在剪映精修对齐）。
+
+## 练习工作台与成本测算
+
+管理台「练习工作台」提供三个零推理练习：
+
+1. **剧本 → 分镜 + 提示词**：粘贴剧本 + 项目名，一键生成练习项目（等同 `/api/pipeline/import`）。
+2. **成本测算**：输入秒数 / 引擎 / 重抽次数，调用 `/api/cost` 给出 CNY 区间。也可以命令行：
+   ```powershell
+   python lab\run.py cost --seconds 60 --engine seedance --retakes 2
+   ```
+3. **提示词对比**：同一镜头分别走规则引擎与本地 LLM，用 `/api/prompt/preview` **不写盘**展示两者差异，适合课堂演示「十层结构 / 一致性锚点」到底补了什么。
+
+成本口径（`stages/cost.py`，保守估算，非实时报价）：
+
+| 引擎 | 每个 5s 镜头 | 说明 |
+|---|---|---|
+| kenburns / footage / placeholder | ¥0 | 纯 FFmpeg / 已有素材 |
+| wan_local | ¥0.05–0.2 | 仅电费与时间 |
+| seedance | ¥8–22 | 按方舟实际计费为准 |
+
 
 
 已就绪的本地组件（`lab/wan.py` 自动探测）：
@@ -227,6 +261,7 @@ lab/
     kenburns.py        关键帧动效引擎（FFmpeg zoompan）
     llm_enhance.py     本地小 LLM 提示词增强（可选）
     models.py          GGUF 模型注册与下载
+    cost.py            成本测算（练习工具）
     promptgen.py       十层提示词 + 一致性锚点
     storyboard.py      剧本→分镜
     composite.py       合成（reuse/footage/kenburns/seedance/wan/placeholder）

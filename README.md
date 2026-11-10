@@ -141,6 +141,8 @@ python lab\server.py --port 8765
 - **离线自检**：`run.py doctor` 检查 Python、FFmpeg（`FFMPEG_BIN` → `bin/` → PATH → CapCut → imageio）、llama-cpp、GGUF 模型与各引擎，不发网络请求。
 - **本地小 LLM**：`llama-cpp-python` + Qwen2.5-0.5B/1.5B Q4，改写提示词后仍强制保留十层结构与一致性锚点；无模型时回退规则引擎。
 - **统一 FFmpeg 解析**：`stages/env.py`，不再写死机器路径。
+- **成片增强**：`--transition fade --xfade 0.5` 叠化转场；`--subtitles` 从 `shot_list.csv` 的 `subtitle`/`caption` 列烧录字幕（自动找中文字体）。
+- **练习工作台**：剧本→分镜一键生成、规则 vs 本地 LLM 提示词对比（不写盘）、成本测算（`run.py cost`）。
 - 工程理念参考本地优先视频编辑器 [Concat](https://github.com/jub0t/Concat)（AGPL-3.0）；本项目未复制其代码，全部为独立 Python + FFmpeg 实现。
 
 ### 实拍素材 + Ark 凭据配置

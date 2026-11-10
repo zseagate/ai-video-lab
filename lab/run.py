@@ -65,6 +65,9 @@ def main(argv: list[str] | None = None) -> int:
     sp.add_argument("--no-reuse", action="store_true")
     sp.add_argument("--steps", type=int, default=20)
     sp.add_argument("--max-frames", type=int, default=25)
+    sp.add_argument("--transition", default="none")
+    sp.add_argument("--xfade", type=float, default=0.5)
+    sp.add_argument("--subtitles", action="store_true")
 
     sp = add_project(sub.add_parser("qc"))
     sp.add_argument("--expected-duration", type=float, default=None)
@@ -80,6 +83,12 @@ def main(argv: list[str] | None = None) -> int:
     sp = sub.add_parser("low-spec")
     sp.add_argument("--on", action="store_true")
     sp.add_argument("--off", action="store_true")
+
+    sp = sub.add_parser("cost")
+    sp.add_argument("--seconds", type=float, default=60)
+    sp.add_argument("--engine", default="kenburns")
+    sp.add_argument("--retakes", type=int, default=1)
+    sp.add_argument("--voice", default="sapi")
 
     sp = sub.add_parser("serve")
     sp.add_argument("--port", type=int, default=8765)
@@ -108,7 +117,8 @@ def main(argv: list[str] | None = None) -> int:
             args.width or d["width"],
             args.height or d["height"],
             reuse=not args.no_reuse, steps=args.steps,
-            max_frames=args.max_frames), ensure_ascii=False))
+            max_frames=args.max_frames, transition=args.transition,
+            xfade=args.xfade, subtitles=args.subtitles), ensure_ascii=False))
     elif args.cmd == "qc":
         print(json.dumps(qc.run(p(), args.expected_duration), ensure_ascii=False))
     elif args.cmd == "all":
@@ -154,6 +164,11 @@ def main(argv: list[str] | None = None) -> int:
             current = env.save_settings({"enabled": False})
         print(json.dumps({"settings": current,
                           "defaults": env.composite_defaults()},
+                         ensure_ascii=False, indent=2))
+    elif args.cmd == "cost":
+        from stages import cost
+
+        print(json.dumps(cost.estimate(args.seconds, args.engine, args.retakes, args.voice),
                          ensure_ascii=False, indent=2))
     elif args.cmd == "serve":
         from server import serve

@@ -103,8 +103,132 @@ def _footage_clip(ffmpeg: str, src: Path, out: Path, seconds: float, w: int, h: 
         return False
 
 
+# ---- Subtitles (drawtext) -----------------------------------------------------
+_FONT_CANDIDATES = [
+    r"C:\Windows\Fonts\msyh.ttc",      # Microsoft YaHei (CJK)
+    r"C:\Windows\Fonts\simhei.ttf",    # SimHei (CJK)
+    r"C:\Windows\Fonts\arial.ttf",
+    "/System/Library/Fonts/PingFang.ttc",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+]
+
+
+def find_font() -> str | None:
+    """Return a usable font file (CJK preferred), or None."""
+    for f in _FONT_CANDIDATES:
+        if Path(f).exists():
+            return f
+    return None
+
+
+def _filter_path(p: str) -> str:
+    """Escape a Windows path for use inside an FFmpeg filter option."""
+    return p.replace("\\", "/").replace(":", r"\:")
+
+
+def _add_subtitle(ffmpeg: str, clip: Path, text: str, w: int, h: int,
+                  font: str, fps: int) -> bool:
+    """Burn one subtitle line onto a clip (re-encode, keeps duration)."""
+    text = (text or "").strip()
+    if not text:
+        return True
+    txt = clip.with_name(clip.stem + ".subtitle.txt")
+    txt.write_text(text, encoding="utf-8")
+    size = max(14, h // 22)
+    vf = (
+        f"drawtext=fontfile='{_filter_path(font)}':textfile='{_filter_path(str(txt.resolve()))}':"
+        f"fontcolor=white:fontsize={size}:line_spacing=6:"
+        f"box=1:boxcolor=black@0.45:boxborderw=8:"
+        f"x=(w-text_w)/2:y=h-text_h-{max(16, h // 16)}"
+    )
+    tmp = clip.with_name(clip.stem + ".sub.mp4")
+    cmd = [
+        ffmpeg, "-y", "-i", str(clip), "-vf", vf,
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", str(fps), "-an", str(tmp),
+    ]
+    try:
+        r = subprocess.run(cmd, capture_output=True, timeout=300)
+        if r.returncode == 0 and tmp.exists() and tmp.stat().st_size > 0:
+            tmp.replace(clip)
+            txt.unlink(missing_ok=True)
+            return True
+    except Exception:
+        pass
+    try:
+        txt.unlink(missing_ok=True)
+        tmp.unlink(missing_ok=True)
+    except OSError:
+        pass
+    return False
+
+
+# ---- Crossfade transitions (xfade) -------------------------------------------
+XFADE_MAP = {
+    "none": None,
+    "fade": "fade",
+    "dissolve": "fade",
+    "wipeleft": "wipeleft",
+    "wiperight": "wiperight",
+    "slideleft": "slideleft",
+    "slideup": "slideup",
+    "circleopen": "circleopen",
+}
+
+
+def _concat_xfade(ffmpeg: str, clips: list[str], durations: list[float],
+                  transition: str, fade: float, out: Path,
+                  w: int, h: int, fps: int) -> bool:
+    """Join clips with xfade transitions (re-encode)."""
+    n = len(clips)
+    if n < 2:
+        return False
+    mode = XFADE_MAP.get(transition, "fade")
+    if not mode:
+        return False
+    fade = max(0.1, min(fade, min(durations) / 3.0))
+
+    inputs: list[str] = []
+    for c in clips:
+        inputs += ["-i", c]
+
+    parts = []
+    for i in range(n):
+        parts.append(
+            f"[{i}:v]scale={w}:{h}:force_original_aspect_ratio=decrease,"
+            f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,"
+            f"setpts=PTS-STARTPTS,fps={fps},settb=AVTB,"
+            f"format=yuv420p[v{i}]"
+        )
+    prev = "v0"
+    cum = durations[0]
+    for k in range(1, n):
+        offset = cum - k * fade
+        if offset < 0.05:
+            offset = 0.05
+        label = f"x{k}"
+        parts.append(
+            f"[{prev}][v{k}]xfade=transition={mode}:duration={fade:.3f}:"
+            f"offset={offset:.3f}[{label}]"
+        )
+        prev = label
+        cum += durations[k]
+    graph = ";".join(parts)
+    cmd = [
+        ffmpeg, "-y", *inputs, "-filter_complex", graph, "-map", f"[{prev}]",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", str(fps),
+        "-movflags", "+faststart", str(out),
+    ]
+    try:
+        r = subprocess.run(cmd, capture_output=True, timeout=1200)
+        return r.returncode == 0 and out.exists() and out.stat().st_size > 0
+    except Exception:
+        return False
+
+
 def run(project: Path, engine: str = "wan_local", fps: int = 30, width: int = 1280, height: int = 720,
-        reuse: bool = True, steps: int = 20, max_frames: int = 25) -> dict:
+        reuse: bool = True, steps: int = 20, max_frames: int = 25,
+        transition: str = "none", xfade: float = 0.5, subtitles: bool = False) -> dict:
     project = Path(project)
     shot_list = project / "shot_list.csv"
     if not shot_list.exists():
@@ -138,6 +262,7 @@ def run(project: Path, engine: str = "wan_local", fps: int = 30, width: int = 12
         cloud_ready = False
 
     clip_files = []
+    durations: list[float] = []
     engine_used = "placeholder"
     for i, row in enumerate(rows):
         shot = row["shot"]
@@ -199,8 +324,20 @@ def run(project: Path, engine: str = "wan_local", fps: int = 30, width: int = 12
         else:
             _color_clip(ffmpeg, out, seconds, i, width, height, fps)
         clip_files.append(str(out))
+        durations.append(seconds)
 
-    # Concat (deterministic, re-encode) then mux voice track.
+    subtitle_note = None
+    if subtitles:
+        font = find_font()
+        if not font:
+            subtitle_note = "no CJK font found; subtitles skipped"
+        else:
+            for row, clip in zip(rows, clip_files):
+                text = row.get("subtitle") or row.get("caption") or ""
+                if text.strip():
+                    _add_subtitle(ffmpeg, Path(clip), text, width, height, font, fps)
+
+    # Join clips: default concat demuxer; optional xfade crossfade (re-encode).
     concat_list = project / "clips" / "concat.txt"
     # Use ABSOLUTE paths: ffmpeg resolves relative paths against concat.txt's dir,
     # so relative entries would double the path and fail to open.
@@ -209,11 +346,17 @@ def run(project: Path, engine: str = "wan_local", fps: int = 30, width: int = 12
     )
     video_out = project / "output" / "video_silent.mp4"
     video_out.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(
-        [ffmpeg, "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list),
-         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(video_out)],
-        capture_output=True, timeout=600,
-    )
+    used_transition = "none"
+    if transition and transition != "none" and len(clip_files) > 1:
+        if _concat_xfade(ffmpeg, clip_files, durations, transition, xfade,
+                         video_out, width, height, fps):
+            used_transition = transition
+    if used_transition == "none":
+        subprocess.run(
+            [ffmpeg, "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list),
+             "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(video_out)],
+            capture_output=True, timeout=600,
+        )
 
     # Voice: build a single mixed audio track from each shot's voice wav.
     voice_dir = project / "audio" / "voice"
@@ -248,6 +391,9 @@ def run(project: Path, engine: str = "wan_local", fps: int = 30, width: int = 12
         "engine": engine,
         "engine_used": engine_used,
         "shots": len(clip_files),
+        "transition": used_transition,
+        "subtitles": bool(subtitles),
+        "subtitle_note": subtitle_note,
         "final": str(final),
         "ffmpeg": ffmpeg,
     }
@@ -265,7 +411,12 @@ if __name__ == "__main__":
     ap.add_argument("--no-reuse", action="store_true")
     ap.add_argument("--steps", type=int, default=20)
     ap.add_argument("--max-frames", type=int, default=25)
+    ap.add_argument("--transition", default="none", help="none|fade|wipeleft|slideleft|circleopen")
+    ap.add_argument("--xfade", type=float, default=0.5, help="transition duration seconds")
+    ap.add_argument("--subtitles", action="store_true", help="burn subtitle/caption column")
     args = ap.parse_args()
     print(json.dumps(run(Path(args.project), args.engine, args.fps, args.width, args.height,
-                         reuse=not args.no_reuse, steps=args.steps, max_frames=args.max_frames),
+                         reuse=not args.no_reuse, steps=args.steps, max_frames=args.max_frames,
+                         transition=args.transition, xfade=args.xfade,
+                         subtitles=args.subtitles),
                      ensure_ascii=False))

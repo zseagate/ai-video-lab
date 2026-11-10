@@ -31,6 +31,9 @@ edit:
   width: 1280
   height: 720
   h264_bitrate: 4M
+  transition: none         # none | fade | wipeleft | wiperight | slideleft | slideup | circleopen
+  xfade: 0.5               # 转场时长（秒）
+  subtitles: false         # 烧录 shot_list.csv 的 subtitle/caption 列
 
 cost:
   mode: free               # free | estimated

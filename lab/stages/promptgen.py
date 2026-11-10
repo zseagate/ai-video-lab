@@ -374,7 +374,7 @@ def optimize(text: str, shot: dict | None = None, style: dict | None = None,
 
     ordered = [layer_map[k] for k in LAYER_ORDER]
     return {"ok": True, "prompt": "\n".join(f"{k}: {v}" for k, v in zip(LAYER_ORDER, ordered)),
-            "changed": changed}
+            "changed": changed, "engine": "rules"}
 
 
 if __name__ == "__main__":

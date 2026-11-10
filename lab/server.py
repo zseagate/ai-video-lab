@@ -28,6 +28,7 @@ import stages.env as lab_env  # noqa: E402
 import stages.models as lab_models  # noqa: E402
 import stages.llm_enhance as llm_enhance  # noqa: E402
 import stages.kenburns as kenburns  # noqa: E402
+import stages.cost as cost  # noqa: E402
 
 STATIC = LAB_DIR / "static"
 PROJECTS = LAB_DIR / "projects"
@@ -226,6 +227,15 @@ class Handler(BaseHTTPRequestHandler):
                         "installed_default": lab_models.resolve_default()})
         elif path == "/api/llm":
             self._json(llm_enhance.status())
+        elif path == "/api/cost":
+            q = lambda k, d: query.get(k, [d])[0]  # noqa: E731
+            try:
+                seconds = float(q("seconds", "60"))
+                retakes = int(q("retakes", "1"))
+            except ValueError:
+                seconds, retakes = 60.0, 1
+            self._json(cost.estimate(seconds, q("engine", "kenburns"),
+                                     retakes, q("voice", "sapi")))
         elif path == "/api/keyframes":
             proj = self._project(query)
             kdir = proj / "assets" / "keyframes"
@@ -249,9 +259,17 @@ class Handler(BaseHTTPRequestHandler):
                     steps = int(query.get("steps", ["20"])[0])
                     max_frames = int(query.get("max_frames", ["25"])[0])
                     reuse = query.get("reuse", ["1"])[0] not in ("0", "false")
+                    transition = query.get("transition", ["none"])[0]
+                    try:
+                        xfade = float(query.get("xfade", ["0.5"])[0])
+                    except ValueError:
+                        xfade = 0.5
+                    subtitles = query.get("subtitles", ["0"])[0] in ("1", "true")
                     self._json(composite.run(proj, engine, fps, width, height,
                                              reuse=reuse, steps=steps,
-                                             max_frames=max_frames))
+                                             max_frames=max_frames,
+                                             transition=transition, xfade=xfade,
+                                             subtitles=subtitles))
                 else:
                     self._json(run_stage(name, proj))
             except Exception as e:  # noqa: BLE001
@@ -364,6 +382,21 @@ class Handler(BaseHTTPRequestHandler):
                     pf.write_text(promptgen.generate(row, manifest, style), encoding="utf-8")
                     count += 1
                 self._json({"status": "ok", "regenerated": count})
+        elif parsed.path == "/api/prompt/preview":
+            # Practice: enhance/preview a prompt WITHOUT writing it to disk.
+            proj = self._project(query)
+            target = str(data.get("shot", "")).strip()
+            text = str(data.get("prompt", "")).strip()
+            if not text:
+                self._json({"error": "prompt required"}, 400)
+                return
+            shots = list_shots(proj)
+            row = next((s for s in shots if s["shot"] == target), None)
+            manifest = _load_manifest(proj)
+            style = promptgen.load_style(proj, manifest)
+            res = promptgen.optimize(text, row, style, use_llm=bool(data.get("use_llm")))
+            res["shot"] = target
+            self._json(res)
         elif parsed.path == "/api/prompt/optimize":
             proj = self._project(query)
             target = str(data.get("shot", "")).strip()

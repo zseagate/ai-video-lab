@@ -142,6 +142,44 @@
     </div>
     <div class="box" style="margin-top:14px">
       <div class="toolbar" style="margin-bottom:10px">
+        <h4 style="margin:0">练习工作台</h4>
+        <span style="flex:1"></span>
+        <span class="hint">零推理 / 低成本练习：剧本→分镜、提示词对比、成本测算</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px">
+        <div>
+          <div class="hint" style="margin-bottom:6px">① 剧本 → 分镜 + 提示词（不生成视频）</div>
+          <textarea class="script" id="practiceText" style="min-height:100px" placeholder="# 练习标题&#10;一句话梗概&#10;&#10;## 场景一&#10;小禾打开折扇，眼神自信…&#10;&#10;## 场景二&#10;雨夜街头，她转身走远…"></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input id="practiceName" class="st" style="flex:1" placeholder="练习项目名">
+            <button class="btn sm primary" onclick="runPractice()">生成练习项目</button>
+          </div>
+        </div>
+        <div>
+          <div class="hint" style="margin-bottom:6px">② 成本测算</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <input id="costSeconds" class="st" style="width:70px" value="60" title="成片秒数">
+            <select id="costEngine" class="st" style="width:130px">
+              <option value="kenburns">关键帧动效</option>
+              <option value="footage">实拍素材</option>
+              <option value="wan_local">本地 Wan</option>
+              <option value="seedance">云端 Seedance</option>
+            </select>
+            <input id="costRetakes" class="st" style="width:64px" value="1" title="重抽次数">
+            <button class="btn sm" onclick="estimateCost()">估算</button>
+          </div>
+          <div class="hint" id="costOut" style="margin-top:8px">输入秒数 / 引擎 / 重抽次数后点估算。</div>
+          <div class="hint" style="margin-top:10px;margin-bottom:6px">③ 提示词对比（规则 vs 本地 LLM，不写盘）</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="cmpShot" class="st" style="width:84px" value="S01">
+            <button class="btn sm" onclick="compareOptimize()">对比</button>
+          </div>
+          <div class="hint" id="cmpOut" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="box" style="margin-top:14px">
+      <div class="toolbar" style="margin-bottom:10px">
         <h4 style="margin:0">提示词工作台（Seedance）</h4>
         <span style="flex:1"></span>
         <button class="btn sm" onclick="rebuildStoryboard('auto')">重建分镜+提示词</button>
@@ -229,7 +267,7 @@ async function refreshProjects(){const p=await api("/api/projects");$("projects"
 function stageAction(st){
   // Per-stage concrete action buttons (in addition to "运行").
   if(st.name==="import-script")return `<button class="btn sm primary" onclick="openImport()">导入剧本</button> `;
-  if(st.name==="composite")return `<button class="btn sm" onclick="runStage('composite',null,{engine:'kenburns'})">关键帧动效</button> <button class="btn sm" onclick="runStage('composite',null,{engine:'footage'})">实拍</button> <button class="btn sm" onclick="runStage('composite',null,{steps:25,max_frames:81})">高清档</button> `;
+  if(st.name==="composite")return `<button class="btn sm" onclick="runStage('composite',null,{engine:'kenburns'})">关键帧动效</button> <button class="btn sm" onclick="runStage('composite',null,{engine:'footage'})">实拍</button> <button class="btn sm" onclick="runStage('composite',null,{transition:'fade',xfade:0.5})">叠化转场</button> <button class="btn sm" onclick="runStage('composite',null,{subtitles:1})">字幕</button> <button class="btn sm" onclick="runStage('composite',null,{steps:25,max_frames:81})">高清档</button> `;
   return "";
 }
 async function refreshStatus(){const s=await api(`/api/status?project=${project}`);
@@ -376,6 +414,34 @@ async function llmEnhanceCurrent(){
  const j=await r.json();
  if(j.status==="ok"){$("pmText").value=j.prompt;$("pmHint").textContent=`完成（引擎：${j.engine||"rules"}）`;changedLog(`${curShot} LLM`,j.changed||[]);}
  else{$("pmHint").textContent="增强失败";addLog(`✗ LLM 增强失败: ${JSON.stringify(j)}`,"err");}
+}
+// ---- practice workbench ------------------------------------------------------
+async function runPractice(){
+ const n=$("practiceName").value.trim();const c=$("practiceText").value.trim();
+ if(!n){addLog("练习：请填项目名","err");return;}
+ if(!c){addLog("练习：请粘贴剧本","err");return;}
+ const r=await fetch("/api/pipeline/import",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:n,content:c})});
+ const j=await r.json();
+ if(j.status==="ok"){addLog(`✓ 练习项目已生成: ${j.title} · ${j.scenes} 场 → ${j.shots} 镜头，${j.total_duration_s}s`,"ok");$("practiceText").value="";$("practiceName").value="";await selectProject(n);}
+ else{addLog(`✗ 生成失败: ${JSON.stringify(j)}`,"err");}
+}
+async function estimateCost(){
+ const q=new URLSearchParams({seconds:$("costSeconds").value||"60",engine:$("costEngine").value,retakes:$("costRetakes").value||"1"});
+ const j=await api("/api/cost?"+q.toString());
+ $("costOut").textContent=`${j.shots} 个 5s 镜头 · ¥${j.low}–${j.high}（${j.engine_label}，${j.retakes} 次重抽）· ${j.note}`;
+}
+async function compareOptimize(){
+ const shot=$("cmpShot").value.trim()||"S01";
+ const r=await fetch(`/api/shots?project=${project}`);const j=await r.json();
+ const x=(j.shots||[]).find(s=>s.shot===shot);
+ if(!x){$("cmpOut").textContent=`未找到镜头 ${shot}`;return;}
+ const call=async(use_llm)=>{const o=await fetch(`/api/prompt/preview?project=${project}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({shot,prompt:x.prompt,use_llm})});return await o.json();};
+ $("cmpOut").textContent="对比中…（LLM 约几秒）";
+ const [a,b]=await Promise.all([call(false),call(true)]);
+ if(!a.ok||!b.ok){$("cmpOut").textContent="对比失败";return;}
+ $("cmpOut").innerHTML=`规则引擎：${(a.changed||[]).length} 项改动 → ${firstLine(a.prompt)}<br>本地 LLM：${(b.changed||[]).length} 项改动（${b.engine}）→ ${firstLine(b.prompt)}`;
+ addLog(`规则优化: ${(a.changed||[]).length} 项改动`,"dim");
+ addLog(`LLM 增强: ${(b.changed||[]).length} 项改动（${b.engine}）`,"dim");
 }
 (async function(){await Promise.all([refreshEngines(),refreshProjects(),refreshStatus(),refreshShots(),refreshStyle(),refreshLocal()]);})();
 </script>
