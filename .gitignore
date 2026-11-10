@@ -26,6 +26,11 @@ output/frames/
 
 # ===== 本地实验室项目产物（不进公开仓库） =====
 lab/projects/
+lab/low_spec.json
+
+# ===== 本地模型与工具二进制（按需下载，不进仓库） =====
+models/
+bin/
 
 # ===== 机器相关的启动/下载脚本 =====
 start_comfy.ps1
@@ -38,6 +43,7 @@ check_ark_env.bat
 _audit.txt
 _new_05_mid.md
 vlc-help.txt
+.tmp_kb/
 
 # ===== 密钥与日志 =====
 .env

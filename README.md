@@ -96,13 +96,14 @@ QC 与发布包
 
 ---
 
----
-
 ## 本地 AI 视频实验室
 
-[`lab/`](lab/) 是一套可复现的**本地练习平台**，把「剧本 → 分镜 → 声音 → 合成 → QC」串成六个阶段，默认走零成本路径，任何一步都可单独重跑：
+[`lab/`](lab/) 是一套可复现的**本地练习平台**，把「剧本 → 分镜 → 声音 → 合成 → QC」串成六个阶段，默认走零成本、低配可用的路径，任何一步都可单独重跑：
 
 ```powershell
+# 环境自检（离线：ffmpeg / 模型 / 引擎就绪）
+python lab\run.py doctor
+
 # 一步跑完（初始化 + 导入示例剧本 + 分镜 + 声音 + 合成 + QC）
 python lab\run.py all --project lab\projects\demo
 
@@ -113,6 +114,12 @@ python lab\run.py audio --project lab\projects\demo
 python lab\run.py composite --project lab\projects\demo
 python lab\run.py qc --project lab\projects\demo
 
+# 低配模式（854x480 / 16fps，默认关键帧动效）
+python lab\run.py low-spec --on
+
+# 本地小 LLM 模型（可选，下载后离线用）
+python lab\run.py models --download qwen2.5-0.5b-instruct-q4
+
 # 本地 Web 练习台（纯标准库，可选）
 python lab\server.py --port 8765
 ```
@@ -120,13 +127,21 @@ python lab\server.py --port 8765
 | 阶段 | 命令 | 默认引擎 | 可切换 |
 |---|---|---|---|
 | 初始化 | `init` | 本地 | — |
-| 剧本导入 | `import-script` | 文本解析 | 任意 LLM（百炼/豆包） |
-| 分镜制作 | `storyboard` | 规则引擎（动作节拍拆分 + 提示词生成） | 本地 LLM |
+| 剧本导入 | `import-script` | 文本解析 | 任意 LLM |
+| 分镜制作 | `storyboard` | 规则引擎（动作节拍拆分 + 提示词生成） | 本地 LLM 增强 |
 | 声音制作 | `audio` | SAPI 占位念白 | Suno 每日积分 |
-| 合成 | `composite` | FFmpeg（占位色块兜底） | 实拍素材 / 本地 Wan / Seedance / 剪映 |
+| 合成 | `composite` | FFmpeg 关键帧动效（低配）/ 占位兜底 | 实拍素材 / 本地 Wan / Seedance / 剪映 |
 | 质检 | `qc` | ffprobe | — |
 
-> 本地 Wan 2.2（1.3B/5B GGUF）是**可插拔视频引擎**：若本地环境就绪则生成草稿镜头，否则自动回退为占位色块，保证链路不断。所有项目产物写入 `lab/projects/`，已被 `.gitignore` 忽略，不进公开仓库。详见 [`lab/README.md`](lab/README.md)。
+> 视频引擎可插拔：`kenburns`（关键帧动效，纯 FFmpeg，无需模型）→ `footage`（实拍）→ `seedance`（云端）→ `wan_local`（本地草稿）→ `placeholder`。低配机器推荐 `kenburns`；所有项目产物写入 `lab/projects/`，已被 `.gitignore` 忽略。详见 [`lab/README.md`](lab/README.md)。
+
+### 低配 / 本地优先
+
+- **零推理出片**：`assets/keyframes/Sxx.png` + FFmpeg `zoompan` → 推近/拉远/横移/跟随，5 秒镜头几秒渲染完成。
+- **离线自检**：`run.py doctor` 检查 Python、FFmpeg（`FFMPEG_BIN` → `bin/` → PATH → CapCut → imageio）、llama-cpp、GGUF 模型与各引擎，不发网络请求。
+- **本地小 LLM**：`llama-cpp-python` + Qwen2.5-0.5B/1.5B Q4，改写提示词后仍强制保留十层结构与一致性锚点；无模型时回退规则引擎。
+- **统一 FFmpeg 解析**：`stages/env.py`，不再写死机器路径。
+- 工程理念参考本地优先视频编辑器 [Concat](https://github.com/jub0t/Concat)（AGPL-3.0）；本项目未复制其代码，全部为独立 Python + FFmpeg 实现。
 
 ### 实拍素材 + Ark 凭据配置
 

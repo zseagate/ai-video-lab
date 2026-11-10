@@ -116,6 +116,32 @@
     </div>
     <div class="box" style="margin-top:14px">
       <div class="toolbar" style="margin-bottom:10px">
+        <h4 style="margin:0">本地引擎 / 练习工具</h4>
+        <span style="flex:1"></span>
+        <span class="hint" id="localinfo"></span>
+        <button class="btn sm" id="lowspecBtn" onclick="toggleLowSpec()">低配模式</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <div class="hint" style="margin-bottom:6px">关键帧动效（Ken Burns，无需视频模型）</div>
+          <div id="keyframes" class="hint">尚无关键帧。</div>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+            <input type="file" id="kfFile" accept="image/*" class="btn" style="flex:1">
+            <input id="kfShot" placeholder="镜头 S01" style="width:90px" class="st">
+            <button class="btn sm primary" onclick="uploadKeyframe()">上传</button>
+          </div>
+          <div class="hint" style="margin-top:6px">放入 <code>assets/keyframes/&lt;镜头&gt;.png</code>；无图时用渐变色卡。</div>
+        </div>
+        <div>
+          <div class="hint" style="margin-bottom:6px">本地小 LLM（提示词增强）</div>
+          <div id="llminfo" class="hint">检测中…</div>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap" id="modelBtns"></div>
+          <div class="hint" style="margin-top:6px">模型下载到本地 <code>models/</code>（已 gitignore），离线可用。</div>
+        </div>
+      </div>
+    </div>
+    <div class="box" style="margin-top:14px">
+      <div class="toolbar" style="margin-bottom:10px">
         <h4 style="margin:0">提示词工作台（Seedance）</h4>
         <span style="flex:1"></span>
         <button class="btn sm" onclick="rebuildStoryboard('auto')">重建分镜+提示词</button>
@@ -169,6 +195,7 @@
       <h4 id="pmTitle" style="margin:0">提示词</h4>
       <span style="flex:1"></span>
       <button class="btn sm" onclick="optimizeCurrent()">✨ 优化</button>
+      <button class="btn sm" onclick="llmEnhanceCurrent()">🧠 LLM 增强</button>
     </div>
     <textarea class="script" id="pmText" style="min-height:260px"></textarea>
     <div class="hint" id="pmHint"></div>
@@ -193,14 +220,16 @@ function addLog(t,cls){const d=document.createElement("div");if(cls)d.className=
 async function api(u){const r=await fetch(u);return await r.json();}
 async function refreshEngines(){const e=await api("/api/engines");$("chips").innerHTML=
  `<span class="chip ${e.ffmpeg.ready?'on':'off'}">FFmpeg</span>`+
+ `<span class="chip on">关键帧动效</span>`+
  `<span class="chip ${(e.footage&&e.footage.clips>0)?'on':'off'}">实拍素材${e.footage&&e.footage.clips?` (${e.footage.clips})`:''}</span>`+
  `<span class="chip ${e.wan.ready?'on':'off'}">本地 Wan</span>`+
- `<span class="chip ${e.seedance.ready?'on':'off'}">云端 Seedance</span>`;}
+ `<span class="chip ${e.seedance.ready?'on':'off'}">云端 Seedance</span>`+
+ `<span class="chip ${(e.llm&&e.llm.available)?'on':'off'}">本地 LLM</span>`;}
 async function refreshProjects(){const p=await api("/api/projects");$("projects").innerHTML=p.projects.map(n=>`<button class="proj ${n===project?'active':''}" onclick="selectProject('${n}')">${n}</button>`).join("");}
 function stageAction(st){
   // Per-stage concrete action buttons (in addition to "运行").
   if(st.name==="import-script")return `<button class="btn sm primary" onclick="openImport()">导入剧本</button> `;
-  if(st.name==="composite")return `<button class="btn sm" onclick="runStage('composite',null,{steps:25,max_frames:81})">高清档</button> `;
+  if(st.name==="composite")return `<button class="btn sm" onclick="runStage('composite',null,{engine:'kenburns'})">关键帧动效</button> <button class="btn sm" onclick="runStage('composite',null,{engine:'footage'})">实拍</button> <button class="btn sm" onclick="runStage('composite',null,{steps:25,max_frames:81})">高清档</button> `;
   return "";
 }
 async function refreshStatus(){const s=await api(`/api/status?project=${project}`);
@@ -208,7 +237,7 @@ async function refreshStatus(){const s=await api(`/api/status?project=${project}
  $("stages").innerHTML=stages.map((st,i)=>{const stt=s.stages[st.name]||{done:false};return `<div class="card"><h3><span class="num">${i+1}</span><span class="dot ${stt.done?'done':''}"></span>${st.label}</h3><p>${st.desc}</p><div class="toolbar">${stageAction(st)}<button class="run" onclick="runStage('${st.name}',this)">运行</button></div></div>`;}).join("");
  $("projmeta").textContent=`项目：${s.project}`;
  const f=s.final;if(f.exists){$("preview").src=`/api/media/final?project=${project}&t=${Date.now()}`;$("finalinfo").textContent=`${f.path} · ${(f.size/1024).toFixed(0)} KB`;}else{$("preview").removeAttribute("src");$("finalinfo").textContent="尚未合成 final.mp4";}}
-async function selectProject(n){project=n;await Promise.all([refreshProjects(),refreshStatus(),refreshShots(),refreshStyle()]);addLog(`已切换项目: ${n}`);}
+async function selectProject(n){project=n;await Promise.all([refreshProjects(),refreshStatus(),refreshShots(),refreshStyle(),refreshLocal()]);addLog(`已切换项目: ${n}`);}
 async function runStage(name,btn,params){if(btn){btn.disabled=true;btn.textContent="运行中…";}addLog(`▶ ${name} ...`);
  try{const q=new URLSearchParams({project});if(params)Object.entries(params).forEach(([k,v])=>q.set(k,v));
   const r=await fetch(`/api/run/${name}?${q}`);const j=await r.json();
@@ -264,8 +293,7 @@ async function optimizeCurrent(){const t=$("pmText").value.trim();if(!t)return;
   $("pmHint").textContent=d.has?d.log:"ℹ️ 提示词已是规范形态（十层齐全、顺序正确、无重复、锚点一致），无改动。";
   if(d.has)$("pmHint").textContent="优化完成："+d.log;
  }else{addLog(`✗ 优化失败: ${JSON.stringify(j)}`,"err");}}
-async function optimizePrompt(shot){curShot=shot;
- const r=await fetch(`/api/shots?project=${project}`);const j=await r.json();const x=(j.shots||[]).find(s=>s.shot===shot);if(!x)return;
+async function optimizePrompt(shot){curShot=shot; const r=await fetch(`/api/shots?project=${project}`);const j=await r.json();const x=(j.shots||[]).find(s=>s.shot===shot);if(!x)return;
  const o=await fetch(`/api/prompt/optimize?project=${project}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({shot,prompt:x.prompt})});
  const oj=await o.json();if(oj.status==="ok"){changedLog(`${shot} 优化`,oj.changed||[]);refreshShots();}else{addLog(`✗ 优化失败: ${JSON.stringify(oj)}`,"err");}}
 async function regenPrompt(shot){curShot=shot;
@@ -297,7 +325,59 @@ async function runBatch(){const n=$("batchName").value.trim();const f=$("batchFi
 async function newProject(){const n=$("npname").value.trim();if(!n)return;const r=await fetch("/api/project/new",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:n})});const j=await r.json();if(j.status==="ok"){$("npname").value="";addLog(`新建项目: ${j.project}`,"ok");await selectProject(j.project);}else{addLog(`新建失败: ${JSON.stringify(j)}`,"err");}}
 async function loadFile(which){let u;if(which==="config"){u="/api/config";}else{u=`/api/file/${which}?project=${project}`;}
  try{const r=await fetch(u);const t=await r.text();$("doc").textContent=t;}catch(e){$("doc").textContent="读取失败: "+e;}}
-(async function(){await Promise.all([refreshEngines(),refreshProjects(),refreshStatus(),refreshShots(),refreshStyle()]);})();
+// ---- local engine / practice tools -------------------------------------------
+let lowSpec=false;
+async function refreshLocal(){
+ const [s,l,k,m]=await Promise.all([api("/api/settings"),api("/api/llm"),api(`/api/keyframes?project=${project}`),api("/api/models")]);
+ lowSpec=!!(s.settings&&s.settings.enabled);
+ const d=s.defaults||{};
+ $("lowspecBtn").textContent=lowSpec?"低配模式：开":"低配模式：关";
+ $("lowspecBtn").className="btn sm"+(lowSpec?" primary":"");
+ $("localinfo").textContent=`合成默认 ${d.engine} · ${d.width}x${d.height}@${d.fps}fps`;
+ $("llminfo").textContent=l.available?`✅ 可用 · ${l.model_name}`:(l.llama_cpp?`llama-cpp ${l.llama_cpp} 已装，但没有 GGUF 模型`:"未安装 llama-cpp-python（可选）");
+ renderKeyframes(k.keyframes||[]);
+ renderModels(m.models||[]);
+}
+function renderKeyframes(list){
+ if(!list.length){$("keyframes").innerHTML='<span class="hint">尚无关键帧（合成时会用渐变色卡）。</span>';return;}
+ $("keyframes").innerHTML=list.map(f=>`<span class="chip on" style="margin:2px">${f.shot} · ${(f.size/1024).toFixed(0)}KB <a class="link" href="#" onclick="deleteKeyframe('${f.name}');return false">删除</a></span>`).join("");
+}
+function renderModels(list){
+ $("modelBtns").innerHTML=list.map(m=>{
+  if(m.installed)return `<span class="chip on">${m.params} 已安装 · ${m.size_mb}MB</span>`;
+  return `<button class="btn sm" onclick="downloadModel('${m.name}')">下载 ${m.params}（${m.expected_mb}MB）</button>`;
+ }).join("");
+}
+async function toggleLowSpec(){
+ const r=await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({enabled:!lowSpec})});
+ const j=await r.json();if(j.status==="ok"){addLog(`低配模式：${j.settings.enabled?"开":"关"}`,"ok");refreshLocal();refreshEngines();}
+}
+async function uploadKeyframe(){
+ const f=$("kfFile").files[0];const shot=$("kfShot").value.trim();
+ if(!f){addLog("关键帧：请选择图片","err");return;}
+ if(!shot){addLog("关键帧：请填镜头号（如 S01）","err");return;}
+ const data_url=await new Promise((res,rej)=>{const rd=new FileReader();rd.onload=()=>res(rd.result);rd.onerror=rej;rd.readAsDataURL(f);});
+ const r=await fetch(`/api/keyframes/upload?project=${project}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({shot,data_url})});
+ const j=await r.json();if(j.status==="ok"){addLog(`✓ 关键帧已上传: ${shot} (${j.file})`,"ok");$("kfFile").value="";$("kfShot").value="";refreshLocal();}else{addLog(`✗ 上传失败: ${JSON.stringify(j)}`,"err");}
+}
+async function deleteKeyframe(name){
+ const r=await fetch(`/api/keyframes/delete?project=${project}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})});
+ const j=await r.json();if(j.status==="ok"){addLog(`已删除关键帧 ${name}`,"dim");refreshLocal();}
+}
+async function downloadModel(name){
+ addLog(`开始下载模型 ${name}（首次约几分钟）…`,"dim");
+ const r=await fetch("/api/models/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name})});
+ const j=await r.json();if(j.status==="ok"){addLog(`✓ 模型就绪: ${name}`,"ok");refreshLocal();refreshEngines();}else{addLog(`✗ 下载失败: ${JSON.stringify(j)}`,"err");}
+}
+async function llmEnhanceCurrent(){
+ const t=$("pmText").value.trim();if(!t)return;
+ $("pmHint").textContent="本地 LLM 增强中…（CPU 约几秒）";
+ const r=await fetch(`/api/prompt/optimize?project=${project}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({shot:curShot,prompt:t,use_llm:true})});
+ const j=await r.json();
+ if(j.status==="ok"){$("pmText").value=j.prompt;$("pmHint").textContent=`完成（引擎：${j.engine||"rules"}）`;changedLog(`${curShot} LLM`,j.changed||[]);}
+ else{$("pmHint").textContent="增强失败";addLog(`✗ LLM 增强失败: ${JSON.stringify(j)}`,"err");}
+}
+(async function(){await Promise.all([refreshEngines(),refreshProjects(),refreshStatus(),refreshShots(),refreshStyle(),refreshLocal()]);})();
 </script>
 </body>
 </html>

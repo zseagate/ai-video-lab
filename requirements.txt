@@ -1,0 +1,8 @@
+# Core (standard library only, plus a bundled ffmpeg fallback).
+# Install with:  python -m pip install -r requirements.txt
+imageio-ffmpeg>=0.5
+
+# Optional: local small-LLM prompt enhancement (CPU wheel).
+# Install with:  python -m pip install "llama-cpp-python>=0.3"
+# The lab runs fine without it; LLM enhancement simply stays disabled.
+# llama-cpp-python>=0.3

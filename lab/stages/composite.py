@@ -1,9 +1,12 @@
 """Stage 5: composite. Assemble shots + voice into a final mp4 via FFmpeg.
 
 Video engine is pluggable:
-  - wan_local  -> requires `ComfyUI/custom_nodes/ComfyUI-WanVideoWrapper` + models;
-                  if not present, falls back to placeholder color clips.
-  - placeholder -> always uses color clips (deterministic, zero cost).
+  - kenburns    -> animate a still keyframe (assets/keyframes/Sxx.*) with FFmpeg
+                  zoompan; zero model/GPU. Falls back to a gradient card.
+  - footage     -> real clips in assets/footage/Sxx.*; falls back to placeholder.
+  - seedance    -> cloud Seedance (needs ARK_API_KEY / ARK_MODEL_ID).
+  - wan_local   -> local Wan draft via ComfyUI; slow on CPU.
+  - placeholder -> deterministic color clips (zero cost).
 """
 from __future__ import annotations
 
@@ -15,7 +18,17 @@ from pathlib import Path
 
 
 def find_ffmpeg() -> str | None:
-    """Locate ffmpeg: PATH, CapCut-bundled, or imageio-ffmpeg."""
+    """Locate ffmpeg via the shared resolver in stages.env.
+
+    Order: FFMPEG_BIN env -> project bin/ -> PATH -> CapCut -> imageio-ffmpeg.
+    Falls back to a local search if stages.env cannot be imported (direct run).
+    """
+    try:
+        from stages import env as _env  # type: ignore
+
+        return _env.find_ffmpeg()
+    except Exception:
+        pass
     exe = shutil.which("ffmpeg")
     if exe:
         return exe
@@ -138,6 +151,18 @@ def run(project: Path, engine: str = "wan_local", fps: int = 30, width: int = 12
             src = footage_path(project, shot)
             if src and _footage_clip(ffmpeg, src, out, seconds, width, height, fps):
                 engine_used = "footage"
+            else:
+                _color_clip(ffmpeg, out, seconds, i, width, height, fps)
+        elif engine == "kenburns":
+            # Keyframe motion path: animate a still (or a gradient card).
+            from stages import kenburns  # type: ignore
+
+            res = kenburns.render(
+                ffmpeg, project, shot, out, seconds, width, height, fps,
+                camera=row.get("camera", "缓慢推近"), card_index=i,
+            )
+            if res.get("status") == "ok":
+                engine_used = "kenburns"
             else:
                 _color_clip(ffmpeg, out, seconds, i, width, height, fps)
         elif cloud_ready:

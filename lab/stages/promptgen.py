@@ -299,8 +299,24 @@ def generate(shot: dict, manifest: dict | None = None, style: dict | None = None
 
 
 # ---- Optimization -------------------------------------------------------------
-def optimize(text: str, shot: dict | None = None, style: dict | None = None) -> dict:
-    """Enhance / normalise a prompt: fill missing layers, dedup, cap length."""
+def optimize(text: str, shot: dict | None = None, style: dict | None = None,
+             use_llm: bool = False) -> dict:
+    """Enhance / normalise a prompt: fill missing layers, dedup, cap length.
+
+    use_llm=True routes through the optional local small-LLM rewriter first;
+    it degrades to the rules engine when no model is installed.
+    """
+    if use_llm:
+        try:
+            from stages import llm_enhance  # type: ignore
+        except Exception:
+            try:
+                import llm_enhance  # type: ignore
+            except Exception:
+                llm_enhance = None  # type: ignore
+        if llm_enhance is not None:
+            return llm_enhance.enhance(text, shot, style)
+
     orig = (text or "").strip()
     if not orig:
         return {"ok": False, "error": "empty prompt"}

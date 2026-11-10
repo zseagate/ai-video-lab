@@ -1,11 +1,14 @@
 # 本地 AI 视频制作实验室（Local AI Video Lab）
 
-> 目标：在本地用最低成本把「剧本 → 分镜 → 声音 → 合成 → QC」跑通，作为课程/工作坊的**练习平台**。
-> 原则：优先零成本路径（百炼免费额度、Suno 每日积分、本地 Wan 草稿、FFmpeg 合成、CapCut 精修）；任何一步都可单独重跑。
+> 目标：在本地用最低成本把「剧本 → 分镜 → 声音 → 合成 → QC」跑通，作为可离线、低配可用的**制作与练习平台**。
+> 原则：本地优先、零成本起步；优先零推理路径（关键帧动效、实拍素材、FFmpeg 合成），可选本地小 LLM 与云端 Seedance；任何一步都可单独重跑。
 
 ## 快速开始
 
 ```powershell
+# 0. 环境自检（离线，报告 ffmpeg / 模型 / 引擎就绪）
+python lab\run.py doctor
+
 # 1. 初始化一个项目
 python lab\run.py init --project lab\projects\demo
 
@@ -18,7 +21,7 @@ python lab\run.py storyboard --project lab\projects\demo
 # 4. 生成占位声音（本地 SAPI 念白；正式版换 Suno）
 python lab\run.py audio --project lab\projects\demo
 
-# 5. 合成（无素材时自动生成占位色块；有素材则拼接）
+# 5. 合成（默认按低配设置；无素材时自动生成占位色块或关键帧动效）
 python lab\run.py composite --project lab\projects\demo
 
 # 6. 质检
@@ -28,6 +31,22 @@ python lab\run.py qc --project lab\projects\demo
 python lab\run.py all --project lab\projects\demo
 ```
 
+### 低配模式与本地模型
+
+```powershell
+# 开启低配模式：854x480 / 16fps，合成默认用 kenburns（纯 FFmpeg，无推理）
+python lab\run.py low-spec --on
+python lab\run.py low-spec --off
+
+# 本地小 LLM：查看 / 下载模型（ModelScope，约 470MB 起）
+python lab\run.py models --list
+python lab\run.py models --download qwen2.5-0.5b-instruct-q4
+```
+
+- 模型存放在 `models/`（已 gitignore），下载一次后**离线可用**。
+- 未安装模型时，提示词增强自动回退规则引擎；未安装 `llama-cpp-python` 时完全不影响主流程。
+
+
 ## 本地 Web 管理台（图形化，可选）
 
 ```powershell
@@ -35,7 +54,7 @@ python lab\server.py --port 8765
 # 浏览器打开 http://127.0.0.1:8765
 ```
 
-管理台提供：项目列表/新建、六阶段一键运行、引擎就绪状态（FFmpeg / 本地 Wan / 云端 Seedance）、成片预览、故事板/镜头清单/manifest/config 查看、运行日志。纯标准库实现，无需额外依赖。
+管理台提供：项目列表/新建、六阶段一键运行、引擎就绪状态（FFmpeg / 关键帧动效 / 实拍 / 本地 Wan / 云端 Seedance / 本地 LLM）、成片预览、故事板/镜头清单/manifest/config 查看、运行日志、**低配模式开关、关键帧管理器、本地模型下载**。纯标准库实现，无需额外依赖。
 
 ## 六个阶段
 
@@ -45,17 +64,19 @@ python lab\server.py --port 8765
 | 2 剧本导入 | `import-script` | 解析标题/一句话/场景，生成 manifest | 文本解析 |
 | 3 分镜制作 | `storyboard` | 剧本拆分成镜头（动作节拍）+ 自动生成 Seedance 提示词 | 规则引擎 `promptgen`（可换 LLM） |
 | 4 声音制作 | `audio` | SAPI 占位念白；正式换 Suno 音频 | SAPI / Suno |
-| 5 合成 | `composite` | FFmpeg 拼接镜头 + 混音 + 导出 | FFmpeg / CapCut |
+| 5 合成 | `composite` | FFmpeg 拼接镜头 + 混音 + 导出 | FFmpeg（kenburns / footage / seedance / wan） |
 | 6 质检 | `qc` | 时长、流、体积、音画同步检查 | ffprobe/ffmpeg |
 
 ## 可插拔引擎
 
 | 环节 | 零成本默认 | 可切换 |
 |---|---|---|
-| 文本 | 内置解析 + 模板 | 百炼/豆包/任意 LLM |
-| 视频 | 本地 Wan 2.2（1.3B/5B GGUF）占位 | 实拍素材 / Seedance / 可灵 / 万相云 API |
+| 文本 | 内置解析 + 模板 | 本地小 LLM（GGUF）/ 任意 LLM |
+| 视频 | 关键帧动效 `kenburns`（纯 FFmpeg） | 实拍素材 / 本地 Wan / Seedance / 可灵 / 万相云 API |
 | 声音 | SAPI 念白占位 | Suno 每日积分 |
 | 合成 | FFmpeg | 剪映/CapCut 精修 |
+
+> 合成引擎选择顺序（`composite.py`）：`reuse`（已有片段）→ `footage`（实拍）→ `seedance`（云端）→ `wan_local`（本地草稿）→ `placeholder`；显式 `--engine kenburns` 时走关键帧动效。低配模式把默认引擎设为 `kenburns`。
 
 > 本地 Wan 视频引擎为「可插拔」：若 ComfyUI + Wan 2.1 T2V 1.3B 模型就绪且服务在跑（`lab/wan.py` 检测），合成阶段会经 ComfyUI 渲染 480p 草稿；否则自动回退为占位色块，保证链路不断。注意 CPU 上渲染很慢（9 帧 / 10 步也需数分钟到十几分钟），草稿请用小帧数、低步数；正式镜头交给云端引擎或 GPU 机器。
 > 所有生成物默认写入 `lab/projects/<name>/`，该目录已被 `.gitignore` 忽略，不进公开仓库。
@@ -90,7 +111,7 @@ python lab\server.py --port 8765
 ### 提示词优化（`promptgen.optimize()`）
 - 缺失层自动补齐、重复层去重、自由文本折叠进 `action`、统一层顺序。
 - 若 `character:/consistent:` 与锚点不一致（被手改漂移），优化时会**自动同步回锚点**，保证全片一致。
-- 可离线跑，无 LLM 依赖；未来把 `config.yaml` 的 `engines.text` 切到 `llm` 即可换语义改写，不改提示词文件契约。
+- 可离线跑，无 LLM 依赖；需要语义级改写时，用 `promptgen.optimize(..., use_llm=True)` 或管理台「🧠 LLM 增强」，无模型时自动回退规则引擎。
 
 ### 批量推进（导入 → 分镜 → 提示词一步到位）
 - `/api/pipeline/import`：给定项目名 + 剧本文本，**一键** 新建项目 + 导入剧本 + 拆分分镜 + 生成 Seedance 提示词 + 提取一致性锚点。
@@ -116,7 +137,39 @@ python lab\run.py composite --project lab\projects\demo --engine footage
 - 管理台引擎徽章会显示「实拍素材 (N)」。
 - 适用：实拍/授权样片打底 + AI 风格层，零云端成本、有真人实拍感。
 
-## 本地 Wan 引擎（可插拔）
+## 关键帧动效引擎 `kenburns`（低配出片核心）
+
+**不需要任何视频模型**：把一张静帧用 FFmpeg `zoompan` 变成有运镜的镜头。4 核 CPU 渲染 5 秒镜头只需几秒。
+
+- 素材：`lab/projects/<name>/assets/keyframes/S01.png`（也支持 jpg/jpeg/webp/bmp；无图时自动生成渐变色卡）。
+- 运镜取自 `shot_list.csv` 的 `camera` 字段（缓慢推近/推近/拉远/横移/环绕/固定/手持/跟随/上升）。
+- 为避免 FFmpeg `zoompan` 的累积缩放抖动（trac #4298），所有缩放/平移都按输出帧号**绝对计算**。
+
+```powershell
+python lab\run.py composite --project lab\projects\demo --engine kenburns
+# 管理台：合成阶段 →「关键帧动效」
+```
+
+- 关键帧可以是手绘、实拍截图、或任意图片模型生成的图 → 立刻得到可看的动态分镜。
+- 管理台「关键帧管理器」支持上传/删除，按镜头号命名。
+
+## 本地小 LLM 提示词增强（可选，离线）
+
+- `stages/llm_enhance.py`：用 `llama-cpp-python` + 小 GGUF（如 Qwen2.5-0.5B/1.5B-Instruct Q4）改写提示词，再经规则引擎归一化，**强制保留**十层结构与跨镜头一致性锚点。
+- 无模型 / 无依赖时自动回退 `promptgen.optimize()`，返回 `engine: rules`，主流程不受影响。
+- 低配参数：`n_ctx=2048`、`n_threads` 取 CPU 核数一半（最多 4），懒加载、可 `reset()` 释放内存。
+- 模型管理：`lab/stages/models.py`，从 ModelScope 下载到 `models/`，校验 GGUF magic；`run.py models` / 管理台「本地引擎」面板。
+
+## 低配模式与本地优先
+
+- `python lab\run.py low-spec --on`：854×480 / 16fps，合成默认 `kenburns`，避免任何大模型推理。
+- 设置持久化在 `lab/low_spec.json`（gitignore），管理台顶部一键切换。
+- `python lab\run.py doctor`：离线自检 Python / FFmpeg（`FFMPEG_BIN` → `bin/` → PATH → CapCut → imageio）/ llama-cpp / 模型 / 各引擎就绪状态，不发任何网络请求。
+- FFmpeg 统一解析在 `stages/env.py`，不再写死机器路径；可用 `FFMPEG_BIN` 覆盖。
+
+> 工程理念参考了本地优先视频编辑器 [Concat](https://github.com/jub0t/Concat)（Rust + FFmpeg 7，AGPL-3.0）的「离线优先、模型按需下载、关键帧动效、代理预览」思路；本项目**未复制其任何代码**，全部为独立的 Python + FFmpeg 实现。
+
+
 
 已就绪的本地组件（`lab/wan.py` 自动探测）：
 
@@ -164,10 +217,21 @@ python lab\wan.py --prompt "a red lantern swaying in the rain at night, cinemati
 lab/
   README.md            本文件
   config.yaml          平台默认配置（含成本模式）
-  run.py               CLI 编排器
+  low_spec.json        低配模式设置（本地生成，gitignore）
+  run.py               CLI 编排器（doctor / models / low-spec）
   server.py            本地 Web 练习台（纯标准库）
   static/index.html    Web 界面
   examples/            示例剧本
-  stages/              六个阶段实现
+  stages/              六个阶段 + 引擎
+    env.py             ffmpeg 解析 / 低配设置 / doctor
+    kenburns.py        关键帧动效引擎（FFmpeg zoompan）
+    llm_enhance.py     本地小 LLM 提示词增强（可选）
+    models.py          GGUF 模型注册与下载
+    promptgen.py       十层提示词 + 一致性锚点
+    storyboard.py      剧本→分镜
+    composite.py       合成（reuse/footage/kenburns/seedance/wan/placeholder）
   projects/            本地项目（git 忽略）
+models/                本地 GGUF 模型（git 忽略）
+scripts/setup.ps1      Windows 一键安装
+scripts/setup.sh       macOS/Linux 一键安装
 ```

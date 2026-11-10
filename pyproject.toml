@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-video-lab"
+version = "0.1.0"
+description = "Low-spec, local-first AI video production lab (script -> storyboard -> sound -> composite -> QC)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "imageio-ffmpeg>=0.5",
+]
+
+[project.optional-dependencies]
+# Local small-LLM prompt enhancement (optional, CPU-friendly).
+llm = ["llama-cpp-python>=0.3"]
+
+[project.scripts]
+ai-video-lab = "lab.run:main"
+
+[tool.setuptools]
+# Ship the lab package only; media and local projects are never packaged.
+packages = ["lab", "lab.stages"]
+
+[tool.setuptools.package-data]
+lab = ["static/*.html", "examples/*", "config.yaml"]

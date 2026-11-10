@@ -4,12 +4,19 @@
 project: lab/projects/demo
 
 engines:
-  text: template          # template | llm
-  video: wan_local        # wan_local | seedance | footage | kling | wan_cloud | placeholder
-                          # wan_local=本地 Wan 2.1 1.3B 草稿; seedance=云端 Seedance(需 ARK_API_KEY/ARK_MODEL_ID)
+  text: template          # template | llm(本地小 GGUF，可选)
+  video: kenburns         # kenburns | footage | seedance | wan_local | placeholder
+                          # kenburns=关键帧动效(纯 FFmpeg，低配首选)
                           # footage=实拍素材(assets/footage/Sxx.mp4), 无则回退占位
+                          # seedance=云端 Seedance(需 ARK_API_KEY/ARK_MODEL_ID)
+                          # wan_local=本地 Wan 草稿(CPU 很慢)
   audio: voice            # voice | suno
   edit: ffmpeg            # ffmpeg | capcut
+
+low_spec:                 # 由 `run.py low-spec --on` 或管理台写入 lab/low_spec.json
+  width: 854
+  height: 480
+  fps: 16
 
 video:
   model: wan2.2_ti2v_5b_gguf   # wan2.1_t2v_1.3b_gguf | wan2.2_ti2v_5b_gguf

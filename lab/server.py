@@ -7,6 +7,7 @@ Run: python lab\\server.py --port 8765  ->  http://127.0.0.1:8765
 from __future__ import annotations
 
 import json
+import base64
 import shutil
 import sys
 import urllib.parse
@@ -23,6 +24,10 @@ import stages.promptgen as promptgen  # noqa: E402
 import stages.audio as audio  # noqa: E402
 import stages.composite as composite  # noqa: E402
 import stages.qc as qc  # noqa: E402
+import stages.env as lab_env  # noqa: E402
+import stages.models as lab_models  # noqa: E402
+import stages.llm_enhance as llm_enhance  # noqa: E402
+import stages.kenburns as kenburns  # noqa: E402
 
 STATIC = LAB_DIR / "static"
 PROJECTS = LAB_DIR / "projects"
@@ -33,7 +38,8 @@ MAX_SCRIPT_BYTES = 2 * 1024 * 1024  # 2 MB script cap
 
 def run_stage(name: str, project: Path) -> dict:
     if name == "init":
-        for sub in ["script", "output", "clips", "prompts", "audio/voice"]:
+        for sub in ["script", "output", "clips", "prompts", "audio/voice",
+                    "assets/keyframes", "assets/footage"]:
             (project / sub).mkdir(parents=True, exist_ok=True)
         (project / "manifest.json").touch(exist_ok=True)
         return {"status": "ok", "stage": "init"}
@@ -45,7 +51,9 @@ def run_stage(name: str, project: Path) -> dict:
     if name == "audio":
         return audio.run(project)
     if name == "composite":
-        return composite.run(project)
+        d = lab_env.composite_defaults()
+        return composite.run(project, engine=d["engine"], fps=d["fps"],
+                             width=d["width"], height=d["height"])
     if name == "qc":
         return qc.run(project)
     raise ValueError(f"unknown stage: {name}")
@@ -115,6 +123,7 @@ def list_shots(project: Path) -> list[dict]:
 def engine_status() -> dict:
     out = {"ffmpeg": {"ready": bool(composite.find_ffmpeg())},
            "footage": {"ready": False, "clips": 0},
+           "kenburns": {"ready": True, "note": "FFmpeg zoompan, no model"},
            "wan": {"ready": False}, "seedance": {"ready": False}}
     try:
         import wan  # type: ignore
@@ -141,6 +150,17 @@ def engine_status() -> dict:
         out["seedance"] = {"ready": seedance.is_ready()}
     except Exception:
         pass
+    try:
+        out["llm"] = llm_enhance.status()
+    except Exception:
+        out["llm"] = {"available": False}
+    try:
+        out["models"] = {
+            "installed": [m["name"] for m in lab_models.status() if m["installed"]],
+            "any": lab_models.resolve_default() is not None,
+        }
+    except Exception:
+        out["models"] = {"installed": [], "any": False}
     return out
 
 
@@ -179,7 +199,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/health":
             self._json({"status": "ok", "service": "video-lab"})
         elif path == "/api/projects":
-            names = sorted(p.name for p in PROJECTS.iterdir() if p.is_dir() and not p.name.startswith("."))
+            names = sorted(
+                p.name for p in PROJECTS.iterdir()
+                if p.is_dir() and not p.name.startswith(".") and p.name != "__pycache__"
+            )
             self._json({"projects": names})
         elif path == "/api/status":
             self._json(project_status(self._project(query)))
@@ -195,10 +218,42 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/config":
             cfg = LAB_DIR / "config.yaml"
             self._file(cfg, "text/plain; charset=utf-8")
+        elif path == "/api/settings":
+            self._json({"settings": lab_env.load_settings(),
+                        "defaults": lab_env.composite_defaults()})
+        elif path == "/api/models":
+            self._json({"models": lab_models.status(),
+                        "installed_default": lab_models.resolve_default()})
+        elif path == "/api/llm":
+            self._json(llm_enhance.status())
+        elif path == "/api/keyframes":
+            proj = self._project(query)
+            kdir = proj / "assets" / "keyframes"
+            files = []
+            if kdir.exists():
+                for f in sorted(kdir.iterdir()):
+                    if f.is_file() and f.suffix.lower() in kenburns.IMAGE_EXTS:
+                        files.append({"name": f.name, "shot": f.stem,
+                                      "size": f.stat().st_size})
+            self._json({"keyframes": files, "dir": str(kdir)})
         elif path.startswith("/api/run/"):
             name = path.rsplit("/", 1)[-1]
             try:
-                self._json(run_stage(name, self._project(query)))
+                proj = self._project(query)
+                if name == "composite":
+                    d = lab_env.composite_defaults()
+                    engine = query.get("engine", [d["engine"]])[0]
+                    fps = int(query.get("fps", [d["fps"]])[0])
+                    width = int(query.get("width", [d["width"]])[0])
+                    height = int(query.get("height", [d["height"]])[0])
+                    steps = int(query.get("steps", ["20"])[0])
+                    max_frames = int(query.get("max_frames", ["25"])[0])
+                    reuse = query.get("reuse", ["1"])[0] not in ("0", "false")
+                    self._json(composite.run(proj, engine, fps, width, height,
+                                             reuse=reuse, steps=steps,
+                                             max_frames=max_frames))
+                else:
+                    self._json(run_stage(name, proj))
             except Exception as e:  # noqa: BLE001
                 self._json({"status": "error", "stage": name, "error": str(e)}, 500)
         elif path == "/api/file/script":
@@ -241,7 +296,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"error": "name required"}, 400)
                 return
             proj = PROJECTS / name
-            for sub in ["script", "output", "clips", "prompts", "audio/voice"]:
+            for sub in ["script", "output", "clips", "prompts", "audio/voice",
+                        "assets/keyframes", "assets/footage"]:
                 (proj / sub).mkdir(parents=True, exist_ok=True)
             self._json({"status": "ok", "project": name})
         elif parsed.path == "/api/project/delete":
@@ -319,14 +375,14 @@ class Handler(BaseHTTPRequestHandler):
             row = next((s for s in shots if s["shot"] == target), None)
             manifest = _load_manifest(proj)
             style = promptgen.load_style(proj, manifest)
-            res = promptgen.optimize(text, row, style)
+            res = promptgen.optimize(text, row, style, use_llm=bool(data.get("use_llm")))
             if not res.get("ok"):
                 self._json({"status": "error", "error": res.get("error")}, 400)
                 return
             pf = proj / "prompts" / f"{target}.txt"
             pf.write_text(res["prompt"], encoding="utf-8")
             self._json({"status": "ok", "shot": target, "prompt": res["prompt"],
-                        "changed": res["changed"]})
+                        "changed": res["changed"], "engine": res.get("engine", "rules")})
         elif parsed.path == "/api/prompt/save":
             proj = self._project(query)
             target = str(data.get("shot", "")).strip()
@@ -353,8 +409,57 @@ class Handler(BaseHTTPRequestHandler):
                         pf.write_text(res["prompt"], encoding="utf-8")
                         count += 1
             self._json({"status": "ok", "style": style, "resynced": count})
+        elif parsed.path == "/api/settings":
+            merged = lab_env.save_settings(data if isinstance(data, dict) else {})
+            self._json({"status": "ok", "settings": merged,
+                        "defaults": lab_env.composite_defaults()})
+        elif parsed.path == "/api/models/download":
+            name = str(data.get("name", "")).strip()
+            if not name:
+                self._json({"error": "name required"}, 400)
+                return
+            res = lab_models.download(name)
+            self._json(res, 200 if res.get("status") == "ok" else 500)
+        elif parsed.path == "/api/keyframes/upload":
+            proj = self._project(query)
+            shot = Path(str(data.get("shot", ""))).name
+            data_url = str(data.get("data_url", ""))
+            if not shot or "," not in data_url:
+                self._json({"error": "shot and data_url required"}, 400)
+                return
+            header, b64 = data_url.split(",", 1)
+            ext = ".png"
+            for cand in (".png", ".jpg", ".jpeg", ".webp", ".bmp"):
+                if cand in header.lower():
+                    ext = cand
+                    break
+            try:
+                raw = base64.b64decode(b64)
+            except Exception:
+                self._json({"error": "bad base64"}, 400)
+                return
+            if len(raw) > 8 * 1024 * 1024:
+                self._json({"error": "image too large (max 8MB)"}, 413)
+                return
+            kdir = proj / "assets" / "keyframes"
+            kdir.mkdir(parents=True, exist_ok=True)
+            out = kdir / f"{shot}{ext}"
+            out.write_bytes(raw)
+            self._json({"status": "ok", "shot": shot, "file": out.name,
+                        "size": len(raw)})
+        elif parsed.path == "/api/keyframes/delete":
+            proj = self._project(query)
+            name = Path(str(data.get("name", ""))).name
+            target = proj / "assets" / "keyframes" / name
+            if not name or not target.exists():
+                self._json({"status": "ok", "removed": False})
+                return
+            if target.suffix.lower() not in kenburns.IMAGE_EXTS:
+                self._json({"error": "not an image"}, 400)
+                return
+            target.unlink()
+            self._json({"status": "ok", "removed": True})
         elif parsed.path == "/api/pipeline/import":
-            # 批量推进：导入剧本 -> 生成分镜 + 提示词（一步到位）。
             name = Path(str(data.get("name", ""))).name
             content = str(data.get("content", "")).strip()
             if not name:
@@ -367,7 +472,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"error": "script too large (max 2MB)"}, 413)
                 return
             proj = PROJECTS / name
-            for sub in ["script", "output", "clips", "prompts", "audio/voice", "assets/keyframes"]:
+            for sub in ["script", "output", "clips", "prompts", "audio/voice",
+                        "assets/keyframes", "assets/footage"]:
                 (proj / sub).mkdir(parents=True, exist_ok=True)
             script = proj / "script" / "script.md"
             script.write_text(content, encoding="utf-8")
